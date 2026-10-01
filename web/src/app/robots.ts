@@ -16,6 +16,8 @@ export default function robots(): MetadataRoute.Robots {
         "/twitter-image",
         "/*.png$",
         "/*.ico$",
+        // Imágenes y videos de anuncios: Meta los descarga desde aquí.
+        "/ads/",
       ],
       disallow: "/",
     },
