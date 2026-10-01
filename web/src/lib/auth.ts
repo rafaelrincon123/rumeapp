@@ -56,6 +56,47 @@ export async function signupWithEmail(
   return { ok: true, needsConfirmation };
 }
 
+/**
+ * Confirma el registro con el código de 6 dígitos del correo ({{ .Token }}
+ * en la plantilla "Confirm sign up" de Supabase). Si sale bien, la sesión
+ * queda abierta en esta misma pestaña.
+ */
+export async function verifySignupCode(
+  email: string,
+  token: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const sb = getSupabase();
+  const { error } = await sb.auth.verifyOtp({ email, token, type: "signup" });
+  if (error) {
+    const m = error.message.toLowerCase();
+    if (m.includes("expired") || m.includes("invalid")) {
+      return { ok: false, error: "El código no es válido o ya venció. Pida uno nuevo abajo." };
+    }
+    if (m.includes("rate") || m.includes("security purposes")) {
+      return { ok: false, error: "Demasiados intentos. Espere un minuto e intente de nuevo." };
+    }
+    return { ok: false, error: error.message };
+  }
+  emit();
+  return { ok: true };
+}
+
+/** Reenvía el correo de confirmación de registro (trae código y enlace). */
+export async function resendSignupEmail(
+  email: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const sb = getSupabase();
+  const emailRedirectTo =
+    typeof window !== "undefined" ? `${window.location.origin}/` : undefined;
+  const { error } = await sb.auth.resend({
+    type: "signup",
+    email,
+    options: { emailRedirectTo },
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
 export async function logout(): Promise<void> {
   const sb = getSupabase();
   await sb.auth.signOut();

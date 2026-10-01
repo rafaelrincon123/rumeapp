@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { signupWithEmail } from "@/lib/auth";
+import CodigoConfirmacion from "./CodigoConfirmacion";
 import { crearFinca } from "@/lib/useFincaActiva";
 import { PLAN_LIMITS, fmtPrecio, CURSO_REGALO } from "@/lib/plans";
 import type { PlanFinca } from "@/lib/types";
@@ -146,7 +147,7 @@ export default function SignupWizard({ onBack }: Props) {
           /* ignore */
         }
         setInfo(
-          "¡Casi listo! Te enviamos un enlace a tu correo. Confírmalo y volvemos a completar tu finca automáticamente."
+          "Te enviamos un código al correo"
         );
         return;
       }
@@ -171,10 +172,10 @@ export default function SignupWizard({ onBack }: Props) {
         type="button"
         onClick={goBack}
         className="absolute top-4 left-4 z-20 flex items-center gap-2 px-3 py-1.5 rounded-full text-sm text-muted hover:text-fg hover:bg-surface-2 transition"
-        aria-label={step === 1 ? "Volver al login" : "Paso anterior"}
+        aria-label={step === 1 ? "Volver" : "Paso anterior"}
       >
         <span aria-hidden>←</span>
-        <span>{step === 1 ? "Login" : "Atrás"}</span>
+        <span>{step === 1 ? "Volver" : "Atrás"}</span>
       </button>
 
       <div className="w-full max-w-lg relative z-10">
@@ -386,12 +387,12 @@ export default function SignupWizard({ onBack }: Props) {
             </div>
           )}
           {info && (
-            <div className="mt-4 text-sm text-fg bg-primary-soft/40 px-3 py-2 rounded-lg">
-              {info}
+            <div className="mt-4 text-fg bg-primary-soft/40 px-3 py-3 rounded-lg">
+              <CodigoConfirmacion email={email.trim()} />
             </div>
           )}
 
-          <div className="mt-6 flex gap-2">
+          <div className={`mt-6 flex gap-2 ${info ? "hidden" : ""}`}>
             {step < 3 ? (
               <button
                 type="button"

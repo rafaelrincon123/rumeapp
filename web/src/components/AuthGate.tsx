@@ -8,12 +8,14 @@ import { useFincaActiva } from "@/lib/useFincaActiva";
 import {
   loginWithEmail,
   sendPasswordReset,
+  resendSignupEmail,
   updatePassword,
   logout,
 } from "@/lib/auth";
 import { IconLock, IconUser } from "./icons";
 import OnboardingWizard from "./OnboardingWizard";
 import LandingPage from "./LandingPage";
+import CodigoConfirmacion from "./CodigoConfirmacion";
 import { trackPixel } from "@/lib/pixel";
 import SignupWizard, {
   PENDING_SIGNUP_KEY,
@@ -90,7 +92,15 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     // Sin sesión en la raíz → landing pública (marketing). En cualquier
     // otra ruta protegida saltamos directo al login.
     if (pathname === "/" && !showLogin) {
-      return <LandingPage onLogin={() => setShowLogin(true)} />;
+      return (
+        <LandingPage
+          onLogin={() => setShowLogin(true)}
+          onSignup={() => {
+            trackPixel("Lead");
+            setShowSignup(true);
+          }}
+        />
+      );
     }
     const canGoBack = pathname === "/";
     return (
@@ -143,6 +153,8 @@ function LoginScreen({
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Correo esperando el código de confirmación (registro sin confirmar).
+  const [codigoPara, setCodigoPara] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -160,7 +172,11 @@ function LoginScreen({
     try {
       if (mode === "login") {
         const res = await loginWithEmail(email.trim(), password);
-        if (!res.ok) setError(traducirError(res.error));
+        if (!res.ok && res.error.toLowerCase().includes("email not confirmed")) {
+          // Cuenta creada pero sin confirmar: mandar código nuevo y pedirlo aquí.
+          await resendSignupEmail(email.trim());
+          setCodigoPara(email.trim());
+        } else if (!res.ok) setError(traducirError(res.error));
       } else {
         const res = await sendPasswordReset(email.trim());
         if (!res.ok) {
@@ -225,6 +241,18 @@ function LoginScreen({
         </div>
 
         <div className="card">
+          {codigoPara ? (
+            <div className="flex flex-col gap-3">
+              <CodigoConfirmacion email={codigoPara} />
+              <button
+                type="button"
+                className="text-[0.72rem] text-subtle hover:text-fg underline underline-offset-4 self-center"
+                onClick={() => setCodigoPara(null)}
+              >
+                Volver a iniciar sesión
+              </button>
+            </div>
+          ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">
               <span className="eyebrow flex items-center gap-1.5">
@@ -307,6 +335,7 @@ function LoginScreen({
                 : "Volver a iniciar sesión"}
             </button>
           </form>
+          )}
         </div>
       </div>
     </div>

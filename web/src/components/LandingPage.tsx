@@ -7,6 +7,7 @@ import {
   loginWithEmail,
   signupWithEmail,
   sendPasswordReset,
+  resendSignupEmail,
 } from "@/lib/auth";
 import {
   IconCow,
@@ -26,9 +27,12 @@ import {
 import PasswordInput from "./PasswordInput";
 import PricingCards from "./PricingCards";
 import CalculadoraPerdidas from "./CalculadoraPerdidas";
+import CodigoConfirmacion from "./CodigoConfirmacion";
 
 interface Props {
   onLogin: () => void;
+  /** Abre el registro directo (sin pasar por la pantalla de ingreso). */
+  onSignup: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -89,13 +93,13 @@ function scrollToId(id: string) {
 // ---------------------------------------------------------------------------
 //  Root
 // ---------------------------------------------------------------------------
-export default function LandingPage({ onLogin }: Props) {
+export default function LandingPage({ onLogin, onSignup }: Props) {
   return (
     <div className="min-h-screen relative overflow-x-hidden landing-root">
       <LandingStyles />
 
-      <TopNav onLogin={onLogin} />
-      <Hero onLogin={onLogin} />
+      <TopNav onLogin={onLogin} onSignup={onSignup} />
+      <Hero onLogin={onLogin} onSignup={onSignup} />
       <AppSummary />
       <ModulesOverview />
       <SociosSection />
@@ -103,11 +107,11 @@ export default function LandingPage({ onLogin }: Props) {
       <PhonesShowcase />
       <AIAssistantSection />
       <AnimalCedulaSection />
-      <CalculadoraPerdidas onLogin={onLogin} />
-      <Pricing onLogin={onLogin} />
+      <CalculadoraPerdidas onLogin={onSignup} />
+      <Pricing onSignup={onSignup} />
       <FAQ />
       <LoginEmbed />
-      <FinalCTA onLogin={onLogin} />
+      <FinalCTA onSignup={onSignup} />
       <Footer />
       <StickyValueBar />
     </div>
@@ -587,7 +591,7 @@ function LandingStyles() {
 // ---------------------------------------------------------------------------
 //  Nav
 // ---------------------------------------------------------------------------
-function TopNav({ onLogin }: { onLogin: () => void }) {
+function TopNav({ onLogin, onSignup }: { onLogin: () => void; onSignup: () => void }) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   useEffect(() => {
@@ -682,7 +686,7 @@ function TopNav({ onLogin }: { onLogin: () => void }) {
             </button>
           </span>
           <span className="hidden sm:inline">
-            <button className="btn-lime" style={{ padding: "0.55rem 1.15rem", fontSize: "0.72rem" }} onClick={onLogin}>
+            <button className="btn-lime" style={{ padding: "0.55rem 1.15rem", fontSize: "0.72rem" }} onClick={onSignup}>
               Empieza gratis
             </button>
           </span>
@@ -755,7 +759,7 @@ function TopNav({ onLogin }: { onLogin: () => void }) {
 // ---------------------------------------------------------------------------
 //  Hero
 // ---------------------------------------------------------------------------
-function Hero({ onLogin }: { onLogin: () => void }) {
+function Hero({ onLogin, onSignup }: { onLogin: () => void; onSignup: () => void }) {
   const ref = useReveal<HTMLDivElement>();
   return (
     <section className="relative min-h-[88vh] md:min-h-[92vh] flex items-center overflow-hidden">
@@ -788,7 +792,7 @@ function Hero({ onLogin }: { onLogin: () => void }) {
             </p>
 
             <div className="mt-10 flex gap-3 flex-wrap items-center">
-              <button className="btn-lime" onClick={onLogin}>
+              <button className="btn-lime" onClick={onSignup}>
                 Empieza gratis <IconArrowUp size={13} />
               </button>
               <button className="btn-ghost-w" onClick={() => scrollToId("modulos")}>
@@ -1105,7 +1109,7 @@ function ThreePillars() {
 // ---------------------------------------------------------------------------
 //  [04] PRECIOS
 // ---------------------------------------------------------------------------
-function Pricing({ onLogin }: { onLogin: () => void }) {
+function Pricing({ onSignup }: { onSignup: () => void }) {
   const ref = useReveal<HTMLDivElement>();
   return (
     <section id="precios" className="relative py-24 md:py-32" style={{ background: "var(--sand)" }}>
@@ -1121,7 +1125,7 @@ function Pricing({ onLogin }: { onLogin: () => void }) {
         </div>
 
 
-        <PricingCards onSelect={() => onLogin()} />
+        <PricingCards onSelect={() => onSignup()} />
 
         <p className="text-center text-[0.7rem] font-mono uppercase tracking-widest mt-10" style={{ color: "var(--forest-3)", opacity: 0.65 }}>
           Precios en pesos colombianos. Pago por transferencia, Nequi o Daviplata.
@@ -1229,6 +1233,8 @@ function LoginEmbed() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  // Correo esperando el código de confirmación (registro sin confirmar).
+  const [codigoPara, setCodigoPara] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -1241,14 +1247,15 @@ function LoginEmbed() {
     try {
       if (mode === "login") {
         const res = await loginWithEmail(email.trim(), password);
-        if (!res.ok) setError(traducirError(res.error));
+        if (!res.ok && res.error.toLowerCase().includes("email not confirmed")) {
+          // Cuenta creada pero sin confirmar: mandar código nuevo y pedirlo aquí.
+          await resendSignupEmail(email.trim());
+          setCodigoPara(email.trim());
+        } else if (!res.ok) setError(traducirError(res.error));
       } else if (mode === "signup") {
         const res = await signupWithEmail(email.trim(), password);
         if (!res.ok) setError(traducirError(res.error));
-        else if (res.needsConfirmation) {
-          setInfo("Revisa tu correo para confirmar la cuenta y luego inicia sesión.");
-          setMode("login");
-        }
+        else if (res.needsConfirmation) setCodigoPara(email.trim());
       } else {
         const res = await sendPasswordReset(email.trim());
         if (!res.ok) setError(traducirError(res.error));
@@ -1283,6 +1290,23 @@ function LoginEmbed() {
             boxShadow: "0 30px 60px -20px rgba(20, 38, 26, 0.15)",
           }}
         >
+          {codigoPara ? (
+            <div style={{ color: "var(--forest)" }}>
+              <CodigoConfirmacion
+                email={codigoPara}
+                inputClassName="landing-input"
+                botonClassName="btn-forest justify-center w-full"
+              />
+              <button
+                type="button"
+                className="mt-4 text-[0.72rem] uppercase tracking-widest hover:underline"
+                style={{ color: "var(--forest-3)" }}
+                onClick={() => setCodigoPara(null)}
+              >
+                ← Usar otro correo
+              </button>
+            </div>
+          ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-[0.65rem] font-mono uppercase tracking-widest" style={{ color: "var(--forest-2)" }}>
@@ -1343,6 +1367,7 @@ function LoginEmbed() {
               {mode === "login" ? "¿No tienes cuenta? Regístrate" : mode === "signup" ? "Ya tengo cuenta" : "Volver a iniciar sesión"}
             </button>
           </form>
+          )}
         </div>
       </div>
     </section>
@@ -1361,7 +1386,7 @@ function traducirError(msg: string): string {
 // ---------------------------------------------------------------------------
 //  Final CTA con foto
 // ---------------------------------------------------------------------------
-function FinalCTA({ onLogin }: { onLogin: () => void }) {
+function FinalCTA({ onSignup }: { onSignup: () => void }) {
   const ref = useReveal<HTMLDivElement>();
   return (
     <section className="relative max-w-6xl mx-auto px-4 md:px-6 pb-24 md:pb-32">
@@ -1402,7 +1427,7 @@ function FinalCTA({ onLogin }: { onLogin: () => void }) {
             Sin instalación, sin tarjeta de crédito. En 2 minutos ya está
             registrando animales.
           </p>
-          <button className="btn-lime mt-10" onClick={onLogin} style={{ padding: "1.1rem 2.4rem" }}>
+          <button className="btn-lime mt-10" onClick={onSignup} style={{ padding: "1.1rem 2.4rem" }}>
             Crear mi cuenta gratis <IconArrowUp size={14} />
           </button>
         </div>

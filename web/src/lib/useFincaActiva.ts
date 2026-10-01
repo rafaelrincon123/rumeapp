@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { track } from "@vercel/analytics";
 import { getSupabase } from "./supabase";
 import { AUTH_EVENT_NAME } from "./auth";
 import { setActiveFincaId, initDB } from "./db";
@@ -195,6 +196,11 @@ export async function crearFinca(opts: {
   const row = Array.isArray(data) ? data[0] : data;
   const finca = fromRow(row as RowFinca);
   writeStoredId(finca.id);
+  try {
+    track("FincaCreada", { plan: opts.planElegido ?? "ranchero" });
+  } catch {
+    /* ignore */
+  }
 
   // Activar la finca YA (no esperar al próximo refresh de useFincaActiva)
   // y esperar a que el cache local recargue — en particular `propietarios`,
