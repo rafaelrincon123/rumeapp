@@ -22,6 +22,7 @@ export default function CodigoConfirmacion({
   const [verificando, setVerificando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reenvio, setReenvio] = useState<"idle" | "enviando" | "ok" | "error">("idle");
+  const esMicrosoft = /@(hotmail|outlook|live|msn)\./i.test(email);
 
   async function confirmar(e: React.FormEvent) {
     e.preventDefault();
@@ -50,6 +51,25 @@ export default function CodigoConfirmacion({
         Le enviamos un <strong>código de 6 números</strong> a{" "}
         <strong className="break-all">{email}</strong>. Escríbalo aquí para entrar.
       </p>
+      <div
+        className="text-sm px-3 py-2.5 rounded-lg flex gap-2 items-start"
+        style={{ background: "rgba(232, 176, 60, 0.16)", border: "1px solid rgba(232, 176, 60, 0.55)", color: "inherit" }}
+      >
+        <span aria-hidden>📩</span>
+        <span>
+          {esMicrosoft ? (
+            <>
+              <strong>Con Hotmail u Outlook el correo casi siempre llega a &quot;Correo no deseado&quot;.</strong>{" "}
+              Búsquelo ahí, de <strong>noreply@rumea.app</strong>.
+            </>
+          ) : (
+            <>
+              <strong>¿No lo ve en la bandeja de entrada?</strong> Revise <strong>Spam</strong> o{" "}
+              <strong>Correo no deseado</strong>. Llega de <strong>noreply@rumea.app</strong>.
+            </>
+          )}
+        </span>
+      </div>
       <input
         className={inputClassName}
         type="text"
@@ -72,9 +92,8 @@ export default function CodigoConfirmacion({
         {verificando ? "Confirmando…" : "Confirmar y entrar"}
       </button>
       <p className="text-xs" style={{ opacity: 0.75 }}>
-        Llega desde <strong>noreply@rumea.app</strong>. Si no lo ve en 2 minutos, revise{" "}
-        <strong>Spam</strong> o <strong>Correo no deseado</strong> (en Hotmail y Outlook casi
-        siempre llega ahí). También puede tocar el botón del correo en vez de escribir el código.
+        También puede tocar el botón del correo en vez de escribir el código. Si lo encontró en
+        no deseados, márquelo como &quot;No es correo no deseado&quot; para recibir bien los avisos.
       </p>
       <button
         type="button"
