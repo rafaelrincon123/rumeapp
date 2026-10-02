@@ -33,7 +33,8 @@ export async function loginWithEmail(
  */
 export async function signupWithEmail(
   email: string,
-  password: string
+  password: string,
+  datos?: { nombre?: string; whatsapp?: string; departamento?: string }
 ): Promise<
   | { ok: true; needsConfirmation: boolean }
   | { ok: false; error: string }
@@ -44,10 +45,16 @@ export async function signupWithEmail(
   // otro dominio (la Site URL de Supabase), la finca no se autocrea.
   const emailRedirectTo =
     typeof window !== "undefined" ? `${window.location.origin}/` : undefined;
+  // Nombre y WhatsApp van a raw_user_meta_data desde ya: si la persona nunca
+  // confirma el correo, igual queda cómo contactarla (user_profiles solo se
+  // llena al crear la finca, ya con sesión).
+  const meta = Object.fromEntries(
+    Object.entries(datos ?? {}).filter(([, v]) => v && v.trim())
+  );
   const { data, error } = await sb.auth.signUp({
     email,
     password,
-    options: { emailRedirectTo },
+    options: { emailRedirectTo, data: meta },
   });
   if (error) return { ok: false, error: error.message };
   emit();

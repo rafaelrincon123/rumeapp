@@ -1230,6 +1230,7 @@ function LoginEmbed() {
   const [mode, setMode] = useState<EmbedMode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -1243,6 +1244,8 @@ function LoginEmbed() {
     if (!email) return setError("Escribe tu email.");
     if (mode !== "reset" && !password) return setError("Escribe tu contraseña.");
     if (mode === "signup" && password.length < 8) return setError("La contraseña debe tener al menos 8 caracteres.");
+    if (mode === "signup" && whatsapp.trim() && whatsapp.replace(/\D/g, "").length < 10)
+      return setError("Revise el WhatsApp: debe tener al menos 10 números.");
     setLoading(true);
     try {
       if (mode === "login") {
@@ -1253,7 +1256,7 @@ function LoginEmbed() {
           setCodigoPara(email.trim());
         } else if (!res.ok) setError(traducirError(res.error));
       } else if (mode === "signup") {
-        const res = await signupWithEmail(email.trim(), password);
+        const res = await signupWithEmail(email.trim(), password, { whatsapp: whatsapp.trim() });
         if (!res.ok) setError(traducirError(res.error));
         else if (res.needsConfirmation) setCodigoPara(email.trim());
       } else {
@@ -1333,6 +1336,25 @@ function LoginEmbed() {
                   placeholder={mode === "signup" ? "Al menos 8 caracteres" : "Tu contraseña"}
                   autoComplete={mode === "signup" ? "new-password" : "current-password"}
                 />
+              </div>
+            )}
+            {mode === "signup" && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[0.65rem] font-mono uppercase tracking-widest" style={{ color: "var(--forest-2)" }}>
+                  WhatsApp <span style={{ opacity: 0.6 }}>(opcional)</span>
+                </label>
+                <input
+                  className="landing-input"
+                  type="tel"
+                  inputMode="tel"
+                  value={whatsapp}
+                  onChange={(e) => setWhatsapp(e.target.value)}
+                  placeholder="300 123 4567"
+                  autoComplete="tel"
+                />
+                <span className="text-[0.7rem]" style={{ color: "rgba(20, 38, 26, 0.6)" }}>
+                  Para ayudarle si el código no le llega o algo falla.
+                </span>
               </div>
             )}
             {error && (

@@ -121,7 +121,11 @@ export default function SignupWizard({ onBack }: Props) {
 
     setLoading(true);
     try {
-      const signup = await signupWithEmail(email.trim(), password);
+      const signup = await signupWithEmail(email.trim(), password, {
+        nombre: nombre.trim(),
+        whatsapp: telefono.trim(),
+        departamento,
+      });
       if (!signup.ok) {
         setError(traducirError(signup.error));
         return;
@@ -262,7 +266,7 @@ export default function SignupWizard({ onBack }: Props) {
                   autoFocus
                 />
                 <span className="text-[0.68rem] text-subtle">
-                  Para recuperar tu cuenta y para alertas por WhatsApp (planes pagos).
+                  Para ayudarte si el código no te llega o algo falla, y para alertas por WhatsApp (planes pagos).
                 </span>
               </div>
               <div className="flex flex-col gap-1">
