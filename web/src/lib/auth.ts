@@ -4,6 +4,7 @@ import { Propietario } from "./types";
 import { getSupabase } from "./supabase";
 import { getCachedDB } from "./db";
 import { trackPixel } from "./pixel";
+import { track } from "@vercel/analytics";
 
 const AUTH_EVENT = "auth:changed";
 export const AUTH_EVENT_NAME = AUTH_EVENT;
@@ -85,6 +86,9 @@ export async function verifySignupCode(
     return { ok: false, error: error.message };
   }
   emit();
+  // Embudo en Vercel Analytics: abre registro (Lead) → crea cuenta
+  // (CompleteRegistration) → pone el código (aquí) → crea finca (FincaCreada).
+  try { track("CodigoConfirmado"); } catch { /* ignore */ }
   return { ok: true };
 }
 
