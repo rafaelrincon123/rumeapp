@@ -11,6 +11,8 @@ import {
   guardarMiPerfil,
   cambiarMiPassword,
   cambiarMiEmail,
+  cargarRecordatorios,
+  guardarRecordatorios,
 } from "@/lib/cuenta";
 import { planLabel, planEfectivo, diasDePruebaRestantes, fmtPrecio } from "@/lib/plans";
 import { ROL_LABEL } from "@/lib/equipo";
@@ -35,6 +37,7 @@ export default function CuentaPage() {
     <div className="space-y-5 max-w-3xl mx-auto">
       <PerfilCard inicial={perfil} email={authEmail ?? ""} />
       <PlanCard />
+      <RecordatoriosCard />
       <PasswordCard />
       <EmailCard email={authEmail ?? ""} />
       <div className="card flex items-center justify-between gap-3 flex-wrap">
@@ -293,6 +296,62 @@ function PlanCard() {
 // ---------------------------------------------------------------------------
 // Contraseña
 // ---------------------------------------------------------------------------
+
+/** Interruptor del correo diario "Hoy toca" (lo manda la Edge Function recordatorios). */
+function RecordatoriosCard() {
+  const [activo, setActivo] = useState<boolean | null>(null);
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    cargarRecordatorios().then(setActivo, () => setActivo(true));
+  }, []);
+
+  async function cambiar() {
+    if (activo === null) return;
+    const nuevo = !activo;
+    setGuardando(true);
+    setError(null);
+    try {
+      await guardarRecordatorios(nuevo);
+      setActivo(nuevo);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <section className="card space-y-3">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="eyebrow">Avisos</div>
+          <div className="text-base font-semibold mt-1">Correo diario «Hoy toca»</div>
+          <p className="text-sm text-muted mt-1">
+            Cada mañana a las 6:00 le llega un correo con lo atrasado, lo de hoy y lo de mañana:
+            actividades, vacunas, purgas y partos. Solo los días en que hay algo.
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={!!activo}
+          aria-label="Recibir el correo diario"
+          disabled={activo === null || guardando}
+          onClick={cambiar}
+          className={`relative shrink-0 w-12 h-7 rounded-full transition ${activo ? "bg-primary" : "bg-rule"}`}
+        >
+          <span
+            className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all ${activo ? "left-6" : "left-1"}`}
+          />
+        </button>
+      </div>
+      <p className="text-xs text-muted">{activo === null ? "Cargando…" : activo ? "Activado" : "Apagado"}</p>
+      {error && <p className="text-sm text-danger">{error}</p>}
+    </section>
+  );
+}
 
 function PasswordCard() {
   const [actual, setActual] = useState("");

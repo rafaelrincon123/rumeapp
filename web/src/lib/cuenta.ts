@@ -54,6 +54,29 @@ export async function guardarMiPerfil(p: MiPerfil): Promise<void> {
   if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(PERFIL_EVENT));
 }
 
+/** ¿Recibe el correo diario "Hoy toca"? Sin fila de perfil = sí (default de la columna). */
+export async function cargarRecordatorios(): Promise<boolean> {
+  const sb = getSupabase();
+  const { data: auth } = await sb.auth.getUser();
+  if (!auth.user) return true;
+  const { data } = await sb
+    .from("user_profiles")
+    .select("recordatorios_correo")
+    .eq("user_id", auth.user.id)
+    .maybeSingle();
+  return data?.recordatorios_correo ?? true;
+}
+
+export async function guardarRecordatorios(activo: boolean): Promise<void> {
+  const sb = getSupabase();
+  const { data: auth } = await sb.auth.getUser();
+  if (!auth.user) throw new Error("No hay sesión iniciada");
+  const { error } = await sb
+    .from("user_profiles")
+    .upsert({ user_id: auth.user.id, recordatorios_correo: activo }, { onConflict: "user_id" });
+  if (error) throw new Error(error.message);
+}
+
 /** Perfil del usuario actual, se actualiza solo cuando se guarda desde /cuenta. */
 export function useMiPerfil(): MiPerfil | null {
   const [perfil, setPerfil] = useState<MiPerfil | null>(null);
