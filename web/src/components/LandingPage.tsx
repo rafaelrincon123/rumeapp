@@ -389,6 +389,91 @@ function LandingStyles() {
         transform: translateY(-2px);
         box-shadow: 0 12px 32px -8px rgba(184, 206, 122, 0.55);
       }
+      /* Botón principal "Empezar ahora": degradado lima, brillo que cruza,
+         anillo que respira y flecha en círculo que avanza al pasar el mouse. */
+      .btn-cta {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.9rem;
+        padding: 0.55rem 0.55rem 0.55rem 1.9rem;
+        border-radius: 999px;
+        font-size: 1rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--forest);
+        background: linear-gradient(135deg, #DDEDA4 0%, #C3D987 45%, #A5C062 100%);
+        border: 1px solid rgba(255, 255, 255, 0.55);
+        box-shadow:
+          0 18px 40px -12px rgba(184, 206, 122, 0.65),
+          0 4px 12px -4px rgba(0, 0, 0, 0.35),
+          inset 0 1px 0 rgba(255, 255, 255, 0.7),
+          inset 0 -2px 0 rgba(20, 38, 26, 0.12);
+        overflow: hidden;
+        isolation: isolate;
+        cursor: pointer;
+        transition: transform 220ms cubic-bezier(0.16,1,0.3,1), box-shadow 220ms;
+      }
+      .btn-cta::after {
+        content: "";
+        position: absolute;
+        top: 0; bottom: 0;
+        left: -60%;
+        width: 45%;
+        background: linear-gradient(100deg, transparent, rgba(255,255,255,0.65), transparent);
+        transform: skewX(-20deg);
+        animation: cta-brillo 3.6s ease-in-out infinite;
+        z-index: -1;
+      }
+      @keyframes cta-brillo {
+        0%, 55% { left: -60%; }
+        100% { left: 130%; }
+      }
+      .btn-cta .cta-flecha {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.75rem;
+        height: 2.75rem;
+        border-radius: 999px;
+        background: var(--forest);
+        color: var(--lime-bright);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
+        transition: transform 220ms cubic-bezier(0.16,1,0.3,1);
+      }
+      .btn-cta:hover {
+        transform: translateY(-2px) scale(1.02);
+        box-shadow:
+          0 24px 50px -12px rgba(184, 206, 122, 0.85),
+          0 6px 16px -4px rgba(0, 0, 0, 0.35),
+          inset 0 1px 0 rgba(255, 255, 255, 0.7),
+          inset 0 -2px 0 rgba(20, 38, 26, 0.12);
+      }
+      .btn-cta:hover .cta-flecha { transform: translateX(4px); }
+      .btn-cta:active { transform: translateY(0) scale(0.98); }
+      .cta-wrap {
+        position: relative;
+        display: inline-flex;
+      }
+      /* Anillo que respira alrededor del botón: llama el ojo sin gritar. */
+      .cta-wrap::before {
+        content: "";
+        position: absolute;
+        inset: -6px;
+        border-radius: 999px;
+        border: 2px solid rgba(212, 231, 154, 0.55);
+        animation: cta-anillo 2.4s ease-out infinite;
+        pointer-events: none;
+      }
+      @keyframes cta-anillo {
+        0% { transform: scale(0.96); opacity: 0.9; }
+        100% { transform: scale(1.12); opacity: 0; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .btn-cta::after, .cta-wrap::before { animation: none; }
+      }
       .btn-ghost-w {
         display: inline-flex;
         align-items: center;
@@ -821,15 +906,22 @@ function HeroInicio({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
               cuaderno. RumeApp le avisa qué toca hacer cada día.
             </p>
 
-            <div className="mt-8 flex flex-col sm:flex-row gap-3 sm:items-center">
-              <button className="btn-lime justify-center" onClick={onSignup} style={{ padding: "1.05rem 2.2rem", fontSize: "0.9rem" }}>
-                Empezar ahora <IconArrowUp size={14} />
-              </button>
-              <span className="text-sm" style={{ color: "rgba(255,255,255,0.80)" }}>
+            <div className="mt-8 flex flex-col sm:flex-row gap-4 sm:gap-5 sm:items-center">
+<span className="cta-wrap w-full sm:w-auto">
+                <button className="btn-cta w-full sm:w-auto" onClick={onSignup}>
+                  Empezar ahora
+                  <span className="cta-flecha" aria-hidden>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 12h14M13 6l6 6-6 6" />
+                    </svg>
+                  </span>
+                </button>
+              </span>
+              <span className="text-sm text-center sm:text-left" style={{ color: "rgba(255,255,255,0.80)" }}>
                 Gratis hasta 5 animales · Sin tarjeta
               </span>
             </div>
-            <p className="mt-5 text-sm" style={{ color: "rgba(255,255,255,0.85)", textShadow: "0 1px 6px rgba(0,0,0,0.35)" }}>
+            <p className="mt-5 text-sm text-center sm:text-left" style={{ color: "rgba(255,255,255,0.85)", textShadow: "0 1px 6px rgba(0,0,0,0.35)" }}>
               ¿Ya tiene cuenta?{" "}
               <button onClick={onLogin} className="font-semibold underline underline-offset-4" style={{ color: "var(--lime-bright)" }}>
                 Ingrese aquí
@@ -838,9 +930,24 @@ function HeroInicio({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
           </div>
 
           <CelularPortada />
+
+          {/* En celular el teléfono queda debajo: quien baja hasta aquí vuelve a
+              tener el botón a la mano. */}
+          <div className="lg:hidden flex justify-center">
+            <span className="cta-wrap w-full sm:w-auto">
+              <button className="btn-cta w-full sm:w-auto" onClick={onSignup}>
+                Empezar ahora
+                <span className="cta-flecha" aria-hidden>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </span>
+              </button>
+            </span>
+          </div>
         </div>
 
-        <div className="mt-12 lg:mt-14 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>
+        <div className="mt-10 lg:mt-14 flex flex-wrap justify-center lg:justify-start gap-x-6 gap-y-2 text-sm font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>
           <Link href="/funciones" className="underline underline-offset-4 hover:text-white">Ver todo lo que hace →</Link>
           <Link href="/precios" className="underline underline-offset-4 hover:text-white">Precios</Link>
           <Link href="/preguntas" className="underline underline-offset-4 hover:text-white">Preguntas</Link>
@@ -1409,9 +1516,9 @@ function FooterNav({ href, children }: { href: string; children: React.ReactNode
 function FooterCompacto() {
   return (
     <footer style={{ background: "var(--forest)", color: "rgba(255,255,255,0.6)" }}>
-      <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 text-[0.72rem] font-mono uppercase tracking-widest">
+      <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 flex flex-wrap items-center justify-center sm:justify-between text-center gap-x-6 gap-y-3 text-[0.72rem] font-mono uppercase tracking-widest">
         <div>RumeApp &middot; Hecho en Colombia</div>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
           {REDES.map((r) => (
             <a key={r.nombre} href={r.url} target="_blank" rel="noopener noreferrer" className="hover:text-white">
               {r.nombre}
