@@ -927,6 +927,8 @@ function HeroInicio({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
                 Ingrese aquí
               </button>
             </p>
+
+            <VentajasNube />
           </div>
 
           <CelularPortada />
@@ -954,6 +956,64 @@ function HeroInicio({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
         </div>
       </div>
     </section>
+  );
+}
+
+/** No hay app en Play Store ni App Store: es web y todo queda en la nube.
+ *  Eso es una ventaja (nada que instalar, nada se pierde con el celular). */
+function VentajasNube() {
+  const items = [
+    {
+      titulo: "Sin descargar nada",
+      detalle: "Se abre en el navegador, como una página",
+      icono: <path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14" />,
+    },
+    {
+      titulo: "Guardado en la nube",
+      detalle: "Si pierde el celular, no pierde nada",
+      icono: <path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 9.2 4.5 4.5 0 0 0 7 18z" />,
+    },
+    {
+      titulo: "Desde cualquier lado",
+      detalle: "Celular, tablet o computador",
+      icono: (
+        <>
+          <rect x="3" y="4" width="13" height="10" rx="1.5" />
+          <path d="M7 18h5" />
+          <rect x="17" y="8" width="5" height="11" rx="1.2" />
+        </>
+      ),
+    },
+  ];
+  return (
+    <ul className="mt-8 grid grid-cols-3 gap-2 sm:gap-3 max-w-xl">
+      {items.map((it) => (
+        <li
+          key={it.titulo}
+          className="flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-3 rounded-2xl px-2 py-3 sm:p-3 text-center sm:text-left"
+          style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)", backdropFilter: "blur(8px)" }}
+        >
+          <span
+            className="inline-flex items-center justify-center w-9 h-9 rounded-full shrink-0"
+            style={{ background: "rgba(184,206,122,0.18)", color: "var(--lime-bright)" }}
+            aria-hidden
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+              {it.icono}
+            </svg>
+          </span>
+          <span className="min-w-0">
+            <span className="block text-[0.78rem] sm:text-sm font-semibold leading-tight text-white">{it.titulo}</span>
+            <span className="hidden sm:block text-xs mt-0.5 leading-snug" style={{ color: "rgba(255,255,255,0.68)" }}>
+              {it.detalle}
+            </span>
+          </span>
+        </li>
+      ))}
+      <li className="col-span-3 sm:hidden text-center text-xs leading-snug mt-1" style={{ color: "rgba(255,255,255,0.75)" }}>
+        Funciona en la web: no hay que instalar nada, y si pierde el celular sus datos siguen en la nube.
+      </li>
+    </ul>
   );
 }
 
@@ -1286,8 +1346,12 @@ function FAQ() {
       a: "Nada para arrancar. El plan Ranchero es gratis para siempre (hasta 5 animales). Los planes pagos traen de regalo el Curso intensivo de ganadería digital; pagando el año completo ahorra 20%.",
     },
     {
-      q: "¿Necesito instalar la app?",
-      a: "No. Se abre en cualquier navegador del celular o computador. Funciona como app nativa — puede guardarla en la pantalla de inicio.",
+      q: "¿Necesito descargar la app de Play Store o App Store?",
+      a: "No. RumeApp funciona en la web: se abre en el navegador (Chrome, Safari) del celular, la tablet o el computador, sin descargar nada y sin ocupar espacio. Si quiere tenerla a la mano, la puede guardar en la pantalla de inicio y se abre como cualquier aplicación.",
+    },
+    {
+      q: "¿Qué pasa si se me pierde o se daña el celular?",
+      a: "No pierde nada. Todo queda guardado en la nube, no en el teléfono: entra desde otro celular o desde un computador con su correo y contraseña, y ahí está su finca completa. Lo que anota un socio o el mayordomo desde el potrero, usted lo ve al instante desde donde esté.",
     },
     {
       q: "¿Sirve sin señal en el potrero?",
