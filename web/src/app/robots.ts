@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 
 // Solo las páginas públicas son indexables; todo lo demás está detrás del login.
-// /_next y las imágenes se permiten para que Google renderice la landing y
+// /_next y las imágenes (incluidas /app/, la pantalla de la portada) se permiten para que Google renderice la landing y
 // Twitter/WhatsApp puedan leer la imagen de preview.
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -9,6 +9,9 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       allow: [
         "/$",
+        "/funciones",
+        "/precios",
+        "/preguntas",
         "/terminos",
         "/privacidad",
         "/_next/",
@@ -18,6 +21,7 @@ export default function robots(): MetadataRoute.Robots {
         "/*.ico$",
         // Imágenes y videos de anuncios: Meta los descarga desde aquí.
         "/ads/",
+        "/app/",
       ],
       disallow: "/",
     },

@@ -4,12 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
-  loginWithEmail,
-  signupWithEmail,
-  sendPasswordReset,
-  resendSignupEmail,
-} from "@/lib/auth";
-import {
   IconCow,
   IconPasture,
   IconHealth,
@@ -21,18 +15,26 @@ import {
   IconUser,
   IconCheck,
   IconArrowUp,
-  IconLock,
   IconSparkles,
 } from "./icons";
-import PasswordInput from "./PasswordInput";
 import PricingCards from "./PricingCards";
 import CalculadoraPerdidas from "./CalculadoraPerdidas";
-import CodigoConfirmacion from "./CodigoConfirmacion";
+
+/** Páginas públicas: la portada es corta (una pantalla) y el resto vive aparte. */
+export type SeccionLanding = "inicio" | "funciones" | "precios" | "preguntas";
+
+export const RUTAS_LANDING: Record<string, SeccionLanding> = {
+  "/": "inicio",
+  "/funciones": "funciones",
+  "/precios": "precios",
+  "/preguntas": "preguntas",
+};
 
 interface Props {
   onLogin: () => void;
   /** Abre el registro directo (sin pasar por la pantalla de ingreso). */
   onSignup: () => void;
+  seccion?: SeccionLanding;
 }
 
 // ---------------------------------------------------------------------------
@@ -85,36 +87,89 @@ function useReveal<T extends HTMLElement>() {
   return ref;
 }
 
-function scrollToId(id: string) {
-  const el = document.getElementById(id);
-  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
 // ---------------------------------------------------------------------------
 //  Root
 // ---------------------------------------------------------------------------
-export default function LandingPage({ onLogin, onSignup }: Props) {
+export default function LandingPage({ onLogin, onSignup, seccion = "inicio" }: Props) {
   return (
     <div className="min-h-screen relative overflow-x-hidden landing-root">
       <LandingStyles />
+      <TopNav onLogin={onLogin} onSignup={onSignup} seccion={seccion} />
 
-      <TopNav onLogin={onLogin} onSignup={onSignup} />
-      <Hero onLogin={onLogin} onSignup={onSignup} />
-      <AppSummary />
-      <ModulesOverview />
-      <SociosSection />
-      <ThreePillars />
-      <PhonesShowcase />
-      <AIAssistantSection />
-      <AnimalCedulaSection />
-      <CalculadoraPerdidas onLogin={onSignup} />
-      <Pricing onSignup={onSignup} />
-      <FAQ />
-      <LoginEmbed />
-      <FinalCTA onSignup={onSignup} />
-      <Footer />
-      <StickyValueBar />
+      {seccion === "inicio" && <HeroInicio onLogin={onLogin} onSignup={onSignup} />}
+
+      {seccion === "funciones" && (
+        <>
+          <PageHeader
+            eyebrow="Funciones"
+            titulo={<>Todo lo que hace<br /><em>RumeApp.</em></>}
+            texto="Hato, sanidad, reproducción, potreros, inventario y gastos entre socios. Esto es lo que va a tener en el celular."
+          />
+          <AppSummary />
+          <ModulesOverview />
+          <SociosSection />
+          <ThreePillars />
+          <PhonesShowcase />
+          <AIAssistantSection />
+          <AnimalCedulaSection />
+          <FinalCTA onSignup={onSignup} />
+          <StickyValueBar />
+        </>
+      )}
+
+      {seccion === "precios" && (
+        <>
+          <PageHeader
+            eyebrow="Precios"
+            titulo={<>Empiece gratis.<br /><em>Crezca cuando quiera.</em></>}
+            texto="El plan Ranchero es gratis para siempre, hasta 5 animales. Sin tarjeta."
+          />
+          <Pricing onSignup={onSignup} />
+          <CalculadoraPerdidas onLogin={onSignup} />
+          <FinalCTA onSignup={onSignup} />
+        </>
+      )}
+
+      {seccion === "preguntas" && (
+        <>
+          <PageHeader
+            eyebrow="Preguntas frecuentes"
+            titulo={<>Lo que más<br /><em>nos preguntan.</em></>}
+            texto="¿No encuentra su pregunta? Escríbanos a soporte@rumea.app."
+          />
+          <FAQ />
+          <FinalCTA onSignup={onSignup} />
+        </>
+      )}
+
+      <Footer onLogin={onLogin} onSignup={onSignup} compacto={seccion === "inicio"} />
     </div>
+  );
+}
+
+const LINKS_NAV: { href: string; label: string; seccion: SeccionLanding }[] = [
+  { href: "/", label: "Inicio", seccion: "inicio" },
+  { href: "/funciones", label: "Funciones", seccion: "funciones" },
+  { href: "/precios", label: "Precios", seccion: "precios" },
+  { href: "/preguntas", label: "Preguntas", seccion: "preguntas" },
+];
+
+/** Encabezado de las páginas internas (funciones, precios, preguntas). */
+function PageHeader({ eyebrow, titulo, texto }: { eyebrow: string; titulo: React.ReactNode; texto: string }) {
+  return (
+    <section className="relative pt-32 md:pt-40 pb-14 md:pb-20" style={{ background: "var(--forest)", color: "white" }}>
+      <div className="max-w-4xl mx-auto px-4 md:px-6 text-center">
+        <div className="text-[0.7rem] font-mono uppercase tracking-[0.18em]" style={{ color: "var(--lime)" }}>
+          {eyebrow}
+        </div>
+        <h1 className="display-xxl uppercase text-white mt-4" style={{ fontSize: "clamp(2.2rem, 6vw, 4rem)" }}>
+          {titulo}
+        </h1>
+        <p className="mt-6 text-base md:text-lg max-w-2xl mx-auto" style={{ color: "rgba(255,255,255,0.78)" }}>
+          {texto}
+        </p>
+      </div>
+    </section>
   );
 }
 
@@ -591,8 +646,8 @@ function LandingStyles() {
 // ---------------------------------------------------------------------------
 //  Nav
 // ---------------------------------------------------------------------------
-function TopNav({ onLogin, onSignup }: { onLogin: () => void; onSignup: () => void }) {
-  const [scrolled, setScrolled] = useState(false);
+function TopNav({ onLogin, onSignup, seccion }: { onLogin: () => void; onSignup: () => void; seccion: SeccionLanding }) {
+  const [scrolledReal, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -600,29 +655,20 @@ function TopNav({ onLogin, onSignup }: { onLogin: () => void; onSignup: () => vo
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-
-  const links = [
-    { id: "modulos", label: "Módulos" },
-    { id: "pilares", label: "Pilares" },
-    { id: "calculadora", label: "Calculadora" },
-    { id: "precios", label: "Precios" },
-    { id: "faq", label: "FAQ" },
-  ];
+  // Con el menú abierto la barra se pone clara para que se lea sobre el menú.
+  const scrolled = scrolledReal || menuOpen;
 
   return (
     <header
       className="fixed top-0 left-0 right-0 z-50 transition-all"
       style={{
-        background: scrolled ? "rgba(248, 245, 238, 0.88)" : "transparent",
+        background: scrolled ? "rgba(248, 245, 238, 0.92)" : "transparent",
         backdropFilter: scrolled ? "blur(16px)" : "none",
         borderBottom: scrolled ? "1px solid rgba(20, 38, 26, 0.10)" : "1px solid transparent",
       }}
     >
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center justify-between gap-3">
-        <button
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="flex items-center gap-2.5 min-w-0"
-        >
+        <Link href="/" className="flex items-center gap-2.5 min-w-0">
           <Image
             src="/logo.png"
             alt="RumeApp"
@@ -630,36 +676,32 @@ function TopNav({ onLogin, onSignup }: { onLogin: () => void; onSignup: () => vo
             height={52}
             sizes="52px"
             className="w-11 h-11 md:w-13 md:h-13 object-contain shrink-0"
-            style={{
-              filter: scrolled ? "none" : "drop-shadow(0 2px 6px rgba(0,0,0,0.35))",
-            }}
+            style={{ filter: scrolled ? "none" : "drop-shadow(0 2px 6px rgba(0,0,0,0.35))" }}
             priority
           />
           <div
             className="text-lg md:text-xl font-bold tracking-tight"
-            style={{
-              color: scrolled ? "var(--forest)" : "white",
-              textShadow: scrolled ? "none" : "0 1px 4px rgba(0,0,0,0.4)",
-            }}
+            style={{ color: scrolled ? "var(--forest)" : "white", textShadow: scrolled ? "none" : "0 1px 4px rgba(0,0,0,0.4)" }}
           >
             RumeApp
           </div>
-        </button>
+        </Link>
 
         <nav className="hidden lg:flex items-center gap-1">
-          {links.map((l) => (
-            <button
-              key={l.id}
-              className="text-[0.8rem] px-3.5 py-1.5 rounded-full transition font-medium uppercase tracking-wider"
+          {LINKS_NAV.map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              className="text-[0.8rem] px-3.5 py-1.5 rounded-full transition font-medium uppercase"
               style={{
-                color: scrolled ? "rgba(20, 38, 26, 0.7)" : "rgba(255,255,255,0.90)",
+                color: scrolled ? "rgba(20, 38, 26, 0.75)" : "rgba(255,255,255,0.90)",
                 textShadow: scrolled ? "none" : "0 1px 3px rgba(0,0,0,0.35)",
                 letterSpacing: "0.06em",
+                background: l.seccion === seccion ? (scrolled ? "rgba(20,38,26,0.07)" : "rgba(255,255,255,0.14)") : "transparent",
               }}
-              onClick={() => scrollToId(l.id)}
             >
               {l.label}
-            </button>
+            </Link>
           ))}
         </nav>
 
@@ -673,13 +715,12 @@ function TopNav({ onLogin, onSignup }: { onLogin: () => void; onSignup: () => vo
               backdropFilter: "blur(8px)",
               letterSpacing: "0.08em",
             }}
-            onClick={() => scrollToId("ingreso")}
+            onClick={onLogin}
           >
             Ingresar
           </button>
-          {/* En celular no caben los dos: "Ingresar" arriba (quien ya tiene cuenta no
-              lo encontraba) y "Empieza gratis" queda grande en la portada. */}
-          {/* Envueltos en <span>: .btn-lime fuerza display:inline-flex y le gana a hidden. */}
+          {/* En celular no caben los dos: "Ingresar" arriba y "Empezar ahora" queda
+              grande en la portada. Envueltos en <span>: .btn-lime fuerza display. */}
           <span className="sm:hidden">
             <button className="btn-lime" style={{ padding: "0.55rem 1.15rem", fontSize: "0.72rem" }} onClick={onLogin}>
               Ingresar
@@ -687,7 +728,7 @@ function TopNav({ onLogin, onSignup }: { onLogin: () => void; onSignup: () => vo
           </span>
           <span className="hidden sm:inline">
             <button className="btn-lime" style={{ padding: "0.55rem 1.15rem", fontSize: "0.72rem" }} onClick={onSignup}>
-              Empieza gratis
+              Empezar ahora
             </button>
           </span>
           <button
@@ -698,7 +739,7 @@ function TopNav({ onLogin, onSignup }: { onLogin: () => void; onSignup: () => vo
               border: `1px solid ${scrolled ? "rgba(20,38,26,0.10)" : "rgba(255,255,255,0.25)"}`,
             }}
             onClick={() => setMenuOpen(!menuOpen)}
-            aria-label="Menu"
+            aria-label="Menú"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               {menuOpen ? (
@@ -716,38 +757,27 @@ function TopNav({ onLogin, onSignup }: { onLogin: () => void; onSignup: () => vo
       </div>
 
       {menuOpen && (
-        <div
-          className="lg:hidden"
-          style={{
-            background: "rgba(248, 245, 238, 0.98)",
-            backdropFilter: "blur(16px)",
-            borderTop: "1px solid rgba(20,38,26,0.10)",
-          }}
-        >
+        <div className="lg:hidden" style={{ background: "rgba(248, 245, 238, 0.98)", borderTop: "1px solid rgba(20,38,26,0.10)" }}>
           <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col gap-1">
-            {links.map((l) => (
-              <button
-                key={l.id}
-                className="text-left text-sm font-medium px-3 py-2.5 rounded-lg"
-                style={{ color: "var(--forest)" }}
-                onClick={() => {
-                  scrollToId(l.id);
-                  setMenuOpen(false);
-                }}
+            {LINKS_NAV.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                className="text-left text-base font-medium px-3 py-3 rounded-lg"
+                style={{ color: "var(--forest)", background: l.seccion === seccion ? "rgba(20,38,26,0.06)" : "transparent" }}
+                onClick={() => setMenuOpen(false)}
               >
                 {l.label}
-              </button>
+              </Link>
             ))}
-            {/* En celular el botón "Ingresar" del header está oculto (sm:inline-flex):
-                sin esto, quien ya tiene cuenta no tenía cómo entrar desde el menú. */}
             <button
-              className="btn-forest sm:hidden mt-2 justify-center w-full"
+              className="btn-lime mt-2 justify-center w-full"
               onClick={() => {
                 setMenuOpen(false);
-                onLogin();
+                onSignup();
               }}
             >
-              Ingresar a mi finca
+              Empezar ahora
             </button>
           </div>
         </div>
@@ -759,45 +789,45 @@ function TopNav({ onLogin, onSignup }: { onLogin: () => void; onSignup: () => vo
 // ---------------------------------------------------------------------------
 //  Hero
 // ---------------------------------------------------------------------------
-function Hero({ onLogin, onSignup }: { onLogin: () => void; onSignup: () => void }) {
-  const ref = useReveal<HTMLDivElement>();
+function HeroInicio({ onLogin, onSignup }: { onLogin: () => void; onSignup: () => void }) {
   return (
-    <section className="relative min-h-[88vh] md:min-h-[92vh] flex items-center overflow-hidden">
+    <section className="relative min-h-[100dvh] flex items-center overflow-hidden">
       <div className="hero-photo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={PHOTO_HERO} alt="" onError={handlePhotoError} />
       </div>
 
-      <div className="relative z-10 w-full max-w-6xl mx-auto px-4 md:px-6 pt-32 md:pt-36 pb-24">
-        <div ref={ref} className="reveal grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-10 items-center">
+      <div className="relative z-10 w-full max-w-6xl mx-auto px-4 md:px-6 pt-28 md:pt-32 pb-14 md:pb-20">
+        <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_1fr] gap-12 lg:gap-8 items-center">
           <div className="text-white">
-            <h1
-              className="display-xxl uppercase text-white"
-              style={{
-                fontSize: "clamp(2.8rem, 7.5vw, 5.75rem)",
-                textShadow: "0 2px 20px rgba(0,0,0,0.35)",
-              }}
+            <div
+              className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[0.65rem] font-mono uppercase tracking-[0.16em]"
+              style={{ background: "rgba(184,206,122,0.16)", border: "1px solid rgba(184,206,122,0.35)", color: "var(--lime-bright)" }}
             >
-              Ganadería<br />
-              directa <em>desde</em><br />
-              el potrero.
+              Gestión ganadera · Hecho en Colombia
+            </div>
+            <h1
+              className="display-xxl uppercase text-white mt-6"
+              style={{ fontSize: "clamp(2.7rem, 7vw, 5.25rem)", textShadow: "0 2px 20px rgba(0,0,0,0.35)" }}
+            >
+              Toda su finca<br />
+              en el <em>celular.</em>
             </h1>
-
             <p
-              className="mt-8 text-base md:text-lg max-w-xl leading-relaxed"
+              className="mt-6 text-base md:text-lg max-w-xl leading-relaxed"
               style={{ color: "rgba(255,255,255,0.90)", textShadow: "0 1px 6px rgba(0,0,0,0.35)" }}
             >
-              Registre animales, sanidad, reproducción y gastos con reparto real
-              entre socios. Todo desde el celular, incluso con señal débil.
+              Animales, vacunas, partos y gastos entre socios, anotados en segundos y sin
+              cuaderno. RumeApp le avisa qué toca hacer cada día.
             </p>
 
-            <div className="mt-10 flex gap-3 flex-wrap items-center">
-              <button className="btn-lime" onClick={onSignup}>
-                Empieza gratis <IconArrowUp size={13} />
+            <div className="mt-8 flex flex-col sm:flex-row gap-3 sm:items-center">
+              <button className="btn-lime justify-center" onClick={onSignup} style={{ padding: "1.05rem 2.2rem", fontSize: "0.9rem" }}>
+                Empezar ahora <IconArrowUp size={14} />
               </button>
-              <button className="btn-ghost-w" onClick={() => scrollToId("modulos")}>
-                Ver módulos
-              </button>
+              <span className="text-sm" style={{ color: "rgba(255,255,255,0.80)" }}>
+                Gratis hasta 5 animales · Sin tarjeta
+              </span>
             </div>
             <p className="mt-5 text-sm" style={{ color: "rgba(255,255,255,0.85)", textShadow: "0 1px 6px rgba(0,0,0,0.35)" }}>
               ¿Ya tiene cuenta?{" "}
@@ -807,32 +837,45 @@ function Hero({ onLogin, onSignup }: { onLogin: () => void; onSignup: () => void
             </p>
           </div>
 
-          {/* Badges: grid 2x2 con separación */}
-          <div className="hidden lg:grid grid-cols-2 gap-5 justify-items-center content-center">
-            <FloatingBadge label="Sin instalación" icon={<IconCheck size={20} />} />
-            <FloatingBadge label="Sin tarjeta" icon={<IconLock size={18} />} />
-            <FloatingBadge label="Multi-finca" icon={<IconPasture size={20} />} />
-            <FloatingBadge label="En vivo" icon={<IconSparkles size={18} />} />
-          </div>
+          <CelularPortada />
         </div>
 
-        {/* Móvil / tablet: grid 2x2 centrado */}
-        <div className="lg:hidden mt-12 grid grid-cols-2 gap-4 justify-items-center max-w-sm mx-auto">
-          <FloatingBadge label="Sin instalación" icon={<IconCheck size={18} />} />
-          <FloatingBadge label="Sin tarjeta" icon={<IconLock size={16} />} />
-          <FloatingBadge label="Multi-finca" icon={<IconPasture size={18} />} />
-          <FloatingBadge label="En vivo" icon={<IconSparkles size={16} />} />
+        <div className="mt-12 lg:mt-14 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>
+          <Link href="/funciones" className="underline underline-offset-4 hover:text-white">Ver todo lo que hace →</Link>
+          <Link href="/precios" className="underline underline-offset-4 hover:text-white">Precios</Link>
+          <Link href="/preguntas" className="underline underline-offset-4 hover:text-white">Preguntas</Link>
         </div>
       </div>
     </section>
   );
 }
 
-function FloatingBadge({ label, icon }: { label: string; icon: React.ReactNode }) {
+/** Celular de la portada: captura real de la pantalla de Sanidad + un aviso encima. */
+function CelularPortada() {
   return (
-    <div className="badge-circle shrink-0">
-      <span className="b-icon">{icon}</span>
-      <span className="b-label">{label}</span>
+    <div className="relative mx-auto w-full max-w-[290px]">
+      <div className="phone-frame" style={{ maxWidth: 290 }}>
+        <div className="phone-screen">
+          <Image
+            src="/app/pantalla-sanidad.webp"
+            alt="Pantalla de Sanidad de RumeApp: 6 animales sin vacunar del 2.º ciclo, purga mañana, vitaminas en 5 días"
+            fill
+            sizes="290px"
+            priority
+            className="object-cover object-top"
+          />
+        </div>
+      </div>
+      <div
+        className="absolute -left-4 sm:-left-14 bottom-16 flex gap-3 items-center rounded-2xl px-3.5 py-3 max-w-[250px]"
+        style={{ background: "rgba(248,245,238,0.97)", boxShadow: "0 18px 40px -12px rgba(0,0,0,0.45)", color: "var(--forest)" }}
+      >
+        <Image src="/logo.png" alt="" width={34} height={34} className="w-[34px] h-[34px] rounded-lg shrink-0" />
+        <div className="min-w-0">
+          <div className="text-[0.62rem] font-mono uppercase tracking-widest" style={{ opacity: 0.6 }}>RumeApp · ahora</div>
+          <div className="text-[0.82rem] font-semibold leading-snug">Hoy toca: purgar 8 novillas del potrero La Loma</div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1112,18 +1155,8 @@ function ThreePillars() {
 function Pricing({ onSignup }: { onSignup: () => void }) {
   const ref = useReveal<HTMLDivElement>();
   return (
-    <section id="precios" className="relative py-24 md:py-32" style={{ background: "var(--sand)" }}>
+    <section id="precios" className="relative pt-12 md:pt-16 pb-24 md:pb-32" style={{ background: "var(--sand)" }}>
       <div ref={ref} className="reveal max-w-6xl mx-auto px-4 md:px-6">
-        <div className="text-center mb-10 md:mb-12">
-          <h2
-            className="display-lg uppercase"
-            style={{ fontSize: "clamp(2rem, 5vw, 3.25rem)", color: "var(--forest)" }}
-          >
-            Simple.<br />
-            <em style={{ color: "var(--forest-3)", fontStyle: "normal" }}>Crece con usted.</em>
-          </h2>
-        </div>
-
 
         <PricingCards onSelect={() => onSignup()} />
 
@@ -1168,17 +1201,8 @@ function FAQ() {
   ];
   const [open, setOpen] = useState<number | null>(0);
   return (
-    <section id="faq" className="relative max-w-3xl mx-auto px-4 md:px-6 py-24 md:py-32">
+    <section id="faq" className="relative max-w-3xl mx-auto px-4 md:px-6 pt-12 md:pt-16 pb-24 md:pb-32">
       <div ref={ref} className="reveal">
-        <div className="text-center mb-14">
-          <h2
-            className="display-lg uppercase"
-            style={{ fontSize: "clamp(2rem, 5vw, 3.25rem)", color: "var(--forest)" }}
-          >
-            ¿Alguna<br />
-            <em style={{ color: "var(--forest-3)", fontStyle: "normal" }}>duda?</em>
-          </h2>
-        </div>
         <div className="space-y-3">
           {qs.map((item, i) => (
             <div
@@ -1219,190 +1243,6 @@ function FAQ() {
       </div>
     </section>
   );
-}
-
-// ---------------------------------------------------------------------------
-//  [06] Login embed
-// ---------------------------------------------------------------------------
-type EmbedMode = "login" | "signup" | "reset";
-function LoginEmbed() {
-  const ref = useReveal<HTMLDivElement>();
-  const [mode, setMode] = useState<EmbedMode>("login");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [whatsapp, setWhatsapp] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
-  // Correo esperando el código de confirmación (registro sin confirmar).
-  const [codigoPara, setCodigoPara] = useState<string | null>(null);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setInfo(null);
-    if (!email) return setError("Escribe tu email.");
-    if (mode !== "reset" && !password) return setError("Escribe tu contraseña.");
-    if (mode === "signup" && password.length < 8) return setError("La contraseña debe tener al menos 8 caracteres.");
-    if (mode === "signup" && whatsapp.trim() && whatsapp.replace(/\D/g, "").length < 10)
-      return setError("Revise el WhatsApp: debe tener al menos 10 números.");
-    setLoading(true);
-    try {
-      if (mode === "login") {
-        const res = await loginWithEmail(email.trim(), password);
-        if (!res.ok && res.error.toLowerCase().includes("email not confirmed")) {
-          // Cuenta creada pero sin confirmar: mandar código nuevo y pedirlo aquí.
-          await resendSignupEmail(email.trim());
-          setCodigoPara(email.trim());
-        } else if (!res.ok) setError(traducirError(res.error));
-      } else if (mode === "signup") {
-        const res = await signupWithEmail(email.trim(), password, { whatsapp: whatsapp.trim() });
-        if (!res.ok) setError(traducirError(res.error));
-        else if (res.needsConfirmation) setCodigoPara(email.trim());
-      } else {
-        const res = await sendPasswordReset(email.trim());
-        if (!res.ok) setError(traducirError(res.error));
-        else setInfo("Si el email existe, te llegará un enlace para nueva contraseña.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <section id="ingreso" className="relative max-w-4xl mx-auto px-4 md:px-6 py-24 md:py-32">
-      <div ref={ref} className="reveal grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-        <div>
-          <h2 className="display-lg uppercase" style={{ fontSize: "clamp(1.75rem, 4.5vw, 2.75rem)", color: "var(--forest)" }}>
-            {mode === "login" ? <>Entre a<br /><em style={{ color: "var(--forest-3)", fontStyle: "normal" }}>su finca.</em></>
-              : mode === "signup" ? <>Cree<br /><em style={{ color: "var(--forest-3)", fontStyle: "normal" }}>su cuenta.</em></>
-              : <>Recupere<br /><em style={{ color: "var(--forest-3)", fontStyle: "normal" }}>el acceso.</em></>}
-          </h2>
-          <p className="mt-6 text-base leading-relaxed" style={{ color: "rgba(20, 38, 26, 0.68)" }}>
-            {mode === "login" ? "Acceda a su operación desde cualquier dispositivo."
-              : mode === "signup" ? "En 2 minutos tiene su finca creada y lista para usar."
-              : "Le enviamos un enlace al correo para elegir una nueva."}
-          </p>
-        </div>
-
-        <div
-          className="rounded-3xl p-6 md:p-8"
-          style={{
-            background: "white",
-            border: "2px solid rgba(20, 38, 26, 0.08)",
-            boxShadow: "0 30px 60px -20px rgba(20, 38, 26, 0.15)",
-          }}
-        >
-          {codigoPara ? (
-            <div style={{ color: "var(--forest)" }}>
-              <CodigoConfirmacion
-                email={codigoPara}
-                inputClassName="landing-input"
-                botonClassName="btn-forest justify-center w-full"
-              />
-              <button
-                type="button"
-                className="mt-4 text-[0.72rem] uppercase tracking-widest hover:underline"
-                style={{ color: "var(--forest-3)" }}
-                onClick={() => setCodigoPara(null)}
-              >
-                ← Usar otro correo
-              </button>
-            </div>
-          ) : (
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[0.65rem] font-mono uppercase tracking-widest" style={{ color: "var(--forest-2)" }}>
-                Email
-              </label>
-              <input
-                className="landing-input"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="tu@correo.com"
-                autoComplete="email"
-              />
-            </div>
-            {mode !== "reset" && (
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[0.65rem] font-mono uppercase tracking-widest" style={{ color: "var(--forest-2)" }}>
-                  Contraseña
-                </label>
-                <PasswordInput
-                  className="landing-input"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder={mode === "signup" ? "Al menos 8 caracteres" : "Tu contraseña"}
-                  autoComplete={mode === "signup" ? "new-password" : "current-password"}
-                />
-              </div>
-            )}
-            {mode === "signup" && (
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[0.65rem] font-mono uppercase tracking-widest" style={{ color: "var(--forest-2)" }}>
-                  WhatsApp <span style={{ opacity: 0.6 }}>(opcional)</span>
-                </label>
-                <input
-                  className="landing-input"
-                  type="tel"
-                  inputMode="tel"
-                  value={whatsapp}
-                  onChange={(e) => setWhatsapp(e.target.value)}
-                  placeholder="300 123 4567"
-                  autoComplete="tel"
-                />
-                <span className="text-[0.7rem]" style={{ color: "rgba(20, 38, 26, 0.6)" }}>
-                  Para ayudarle si el código no le llega o algo falla.
-                </span>
-              </div>
-            )}
-            {error && (
-              <div className="text-sm px-3 py-2 rounded-lg" style={{ background: "rgba(217, 83, 79, 0.10)", color: "#B54B2A" }}>
-                {error}
-              </div>
-            )}
-            {info && (
-              <div className="text-sm px-3 py-2 rounded-lg" style={{ background: "rgba(184, 206, 122, 0.20)", color: "var(--forest)" }}>
-                {info}
-              </div>
-            )}
-            <button type="submit" className="btn-forest justify-center w-full" disabled={loading} style={{ padding: "0.95rem 1.6rem" }}>
-              {loading ? "…" : mode === "login" ? "Entrar" : mode === "signup" ? "Crear cuenta" : "Enviar enlace"}
-            </button>
-            {mode === "login" && (
-              <button
-                type="button"
-                className="text-[0.72rem] uppercase tracking-widest self-center hover:underline"
-                style={{ color: "var(--forest-3)" }}
-                onClick={() => { setError(null); setInfo(null); setMode("reset"); }}
-              >
-                ¿Olvidaste tu contraseña?
-              </button>
-            )}
-            <button
-              type="button"
-              className="text-[0.75rem] uppercase tracking-widest font-semibold py-3 rounded-full"
-              style={{ color: "var(--forest-2)", border: "1px solid rgba(20,38,26,0.15)" }}
-              onClick={() => { setError(null); setInfo(null); setMode(mode === "login" ? "signup" : "login"); }}
-            >
-              {mode === "login" ? "¿No tienes cuenta? Regístrate" : mode === "signup" ? "Ya tengo cuenta" : "Volver a iniciar sesión"}
-            </button>
-          </form>
-          )}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function traducirError(msg: string): string {
-  const m = msg.toLowerCase();
-  if (m.includes("invalid login credentials")) return "Email o contraseña incorrectos.";
-  if (m.includes("email not confirmed")) return "El email todavía no está confirmado.";
-  if (m.includes("already registered") || m.includes("already exists"))
-    return "Ese email ya está registrado. Inicia sesión.";
-  return msg;
 }
 
 // ---------------------------------------------------------------------------
@@ -1476,7 +1316,8 @@ const REDES = [
   },
 ];
 
-function Footer() {
+function Footer({ onLogin, onSignup, compacto = false }: { onLogin: () => void; onSignup: () => void; compacto?: boolean }) {
+  if (compacto) return <FooterCompacto />;
   return (
     <footer className="relative" style={{ background: "var(--forest)", color: "white" }}>
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-16 md:py-20">
@@ -1522,11 +1363,9 @@ function Footer() {
               Producto
             </div>
             <ul className="space-y-2.5 text-sm">
-              <li><FooterLink onClick={() => scrollToId("modulos")}>Módulos</FooterLink></li>
-              <li><FooterLink onClick={() => scrollToId("socios")}>Reparto socios</FooterLink></li>
-              <li><FooterLink onClick={() => scrollToId("ia")}>Asistente IA</FooterLink></li>
-              <li><FooterLink onClick={() => scrollToId("precios")}>Precios</FooterLink></li>
-              <li><FooterLink onClick={() => scrollToId("faq")}>FAQ</FooterLink></li>
+              <li><FooterNav href="/funciones">Funciones</FooterNav></li>
+              <li><FooterNav href="/precios">Precios</FooterNav></li>
+              <li><FooterNav href="/preguntas">Preguntas frecuentes</FooterNav></li>
             </ul>
           </div>
           <div>
@@ -1534,8 +1373,8 @@ function Footer() {
               Cuenta
             </div>
             <ul className="space-y-2.5 text-sm">
-              <li><FooterLink onClick={() => scrollToId("ingreso")}>Iniciar sesión</FooterLink></li>
-              <li><FooterLink onClick={() => scrollToId("ingreso")}>Crear cuenta</FooterLink></li>
+              <li><FooterLink onClick={onLogin}>Iniciar sesión</FooterLink></li>
+              <li><FooterLink onClick={onSignup}>Crear cuenta gratis</FooterLink></li>
             </ul>
           </div>
         </div>
@@ -1552,6 +1391,34 @@ function Footer() {
             </Link>
             <span>Hecho en Colombia</span>
           </div>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+function FooterNav({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link href={href} className="transition hover:text-white" style={{ color: "rgba(255,255,255,0.75)" }}>
+      {children}
+    </Link>
+  );
+}
+
+/** Pie corto de la portada: una línea con redes y legales. */
+function FooterCompacto() {
+  return (
+    <footer style={{ background: "var(--forest)", color: "rgba(255,255,255,0.6)" }}>
+      <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 text-[0.72rem] font-mono uppercase tracking-widest">
+        <div>RumeApp &middot; Hecho en Colombia</div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          {REDES.map((r) => (
+            <a key={r.nombre} href={r.url} target="_blank" rel="noopener noreferrer" className="hover:text-white">
+              {r.nombre}
+            </a>
+          ))}
+          <Link href="/terminos" className="hover:text-white">Términos</Link>
+          <Link href="/privacidad" className="hover:text-white">Privacidad</Link>
         </div>
       </div>
     </footer>

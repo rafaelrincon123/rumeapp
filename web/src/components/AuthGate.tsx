@@ -14,7 +14,7 @@ import {
 } from "@/lib/auth";
 import { IconLock, IconUser } from "./icons";
 import OnboardingWizard from "./OnboardingWizard";
-import LandingPage from "./LandingPage";
+import LandingPage, { RUTAS_LANDING } from "./LandingPage";
 import CodigoConfirmacion from "./CodigoConfirmacion";
 import { trackPixel } from "@/lib/pixel";
 import SignupWizard, {
@@ -85,15 +85,19 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     return <SetNewPasswordScreen email={authEmail} onDone={clearRecovery} />;
   }
 
+  // Páginas públicas de la landing (/, /funciones, /precios, /preguntas).
+  const seccion = RUTAS_LANDING[pathname];
+
   if (!hasSession) {
     if (showSignup) {
       return <SignupWizard onBack={() => setShowSignup(false)} />;
     }
-    // Sin sesión en la raíz → landing pública (marketing). En cualquier
+    // Sin sesión en una página pública → landing (marketing). En cualquier
     // otra ruta protegida saltamos directo al login.
-    if (pathname === "/" && !showLogin) {
+    if (seccion && !showLogin) {
       return (
         <LandingPage
+          seccion={seccion}
           onLogin={() => setShowLogin(true)}
           onSignup={() => {
             trackPixel("Lead");
@@ -102,7 +106,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
         />
       );
     }
-    const canGoBack = pathname === "/";
+    const canGoBack = !!seccion;
     return (
       <LoginScreen
         onBackToLanding={canGoBack ? () => setShowLogin(false) : undefined}
@@ -112,6 +116,13 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
         }}
       />
     );
+  }
+
+  // Con sesión, las páginas informativas se siguen viendo; sus botones de
+  // ingresar/empezar llevan a la app.
+  if (seccion && seccion !== "inicio") {
+    const irALaApp = () => window.location.assign("/");
+    return <LandingPage seccion={seccion} onLogin={irALaApp} onSignup={irALaApp} />;
   }
 
   // Con sesión pero aún no sabemos si tiene finca: esperar.
