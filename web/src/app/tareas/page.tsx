@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useDB } from "@/lib/useDB";
+import { useAbrirNuevo } from "@/lib/tutorial";
 import { updateCollection, uid, nowISO } from "@/lib/storage";
 import { fmtDate, diasHasta, todayISO, ymdLocal } from "@/lib/format";
 import {
@@ -58,6 +59,12 @@ export default function TareasPage() {
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
   const [dayModal, setDayModal] = useState<{ dateISO: string; items: UnifiedItem[] } | null>(null);
+  // Desde el tutorial de primeros pasos: /tareas?nuevo=1 abre el formulario.
+  useAbrirNuevo(() => {
+    setEdit(null);
+    setModalMode("edit");
+    setOpen(true);
+  }, ready);
 
   const unified: UnifiedItem[] = useMemo(() => {
     if (!db) return [];

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useDB } from "@/lib/useDB";
+import { useAbrirNuevo } from "@/lib/tutorial";
 import { useAuth } from "@/lib/useAuth";
 import { useFincaActiva } from "@/lib/useFincaActiva";
 import { updateCollection, uid } from "@/lib/storage";
@@ -32,6 +33,8 @@ export default function SociosPage() {
   const [miembros, setMiembros] = useState<Miembro[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  // Desde el tutorial de primeros pasos: /socios?nuevo=1 abre el formulario.
+  useAbrirNuevo(() => setCreating(true), ready);
 
   const isOwner = !!(activa && authUserId && activa.ownerUserId === authUserId);
   const miMiembro = useMemo(

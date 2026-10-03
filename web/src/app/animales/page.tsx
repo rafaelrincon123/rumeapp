@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useDB } from "@/lib/useDB";
+import { useAbrirNuevo } from "@/lib/tutorial";
 import { updateCollection, uid, nowISO } from "@/lib/storage";
 import { edadTexto, fmtDate, fmtCOP, fmtNumber, diasHasta, todayISO } from "@/lib/format";
 import {
@@ -38,6 +39,11 @@ export default function AnimalesPage() {
   const [edit, setEdit] = useState<Animal | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [detailAnimal, setDetailAnimal] = useState<Animal | null>(null);
+  // Desde el tutorial de primeros pasos: /animales?nuevo=1 abre el formulario.
+  useAbrirNuevo(() => {
+    setEdit(null);
+    setOpen(true);
+  }, ready);
 
   const filtered = useMemo(() => {
     if (!db) return [];

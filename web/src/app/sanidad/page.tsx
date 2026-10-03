@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useDB } from "@/lib/useDB";
+import { useAbrirNuevo } from "@/lib/tutorial";
 import { updateCollection, uid, nowISO } from "@/lib/storage";
 import { fmtDate, fmtCOP, diasHasta, todayISO } from "@/lib/format";
 import { SanidadEvento, TIPOS_SANIDAD, TipoSanidad } from "@/lib/types";
@@ -21,6 +22,12 @@ export default function SanidadPage() {
   const [filtroTipo, setFiltroTipo] = useState<TipoSanidad | "">("");
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
+  // Desde el tutorial de primeros pasos: /sanidad?nuevo=1 abre el formulario.
+  useAbrirNuevo(() => {
+    setEdit(null);
+    setMode("edit");
+    setOpen(true);
+  }, ready);
 
   const eventos = useMemo(() => {
     if (!db) return [];

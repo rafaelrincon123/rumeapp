@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useDB } from "@/lib/useDB";
+import { useAbrirNuevo } from "@/lib/tutorial";
 import { updateCollection, uid, nowISO } from "@/lib/storage";
 import { fmtCOP, fmtDate, todayISO } from "@/lib/format";
 import {
@@ -34,6 +35,12 @@ export default function GastosPage() {
   const [editI, setEditI] = useState<Ingreso | null>(null);
   const [modeG, setModeG] = useState<"view" | "edit">("view");
   const [modeI, setModeI] = useState<"view" | "edit">("view");
+  // Desde el tutorial de primeros pasos: /gastos?nuevo=1 abre el formulario.
+  useAbrirNuevo(() => {
+    setEditG(null);
+    setModeG("edit");
+    setOpenG(true);
+  }, ready);
 
   const gastos = useMemo(() => {
     if (!db) return [];
