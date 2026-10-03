@@ -61,7 +61,6 @@ const INFO: Record<
       { texto: "Reportes en PDF de cada sección" },
       { texto: "Soporte dedicado" },
       { texto: "Alertas por WhatsApp", proximamente: true },
-      { texto: "App móvil (Android / iOS)", proximamente: true },
     ],
   },
 };
