@@ -22,8 +22,11 @@ export default function SanidadPage() {
   const [filtroTipo, setFiltroTipo] = useState<TipoSanidad | "">("");
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
+  // Animal preescogido al abrir con /sanidad?nuevo=1&animal=<id>.
+  const [animalInicial, setAnimalInicial] = useState("");
   // Desde el tutorial de primeros pasos: /sanidad?nuevo=1 abre el formulario.
-  useAbrirNuevo(() => {
+  useAbrirNuevo((params) => {
+    setAnimalInicial(params.get("animal") ?? "");
     setEdit(null);
     setMode("edit");
     setOpen(true);
@@ -384,7 +387,10 @@ export default function SanidadPage() {
 
       <Modal
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          setOpen(false);
+          setAnimalInicial("");
+        }}
         title={edit ? (mode === "view" ? "Detalle de evento" : "Editar evento") : "Nuevo evento sanitario"}
       >
         {edit && mode === "view" && (
@@ -416,9 +422,16 @@ export default function SanidadPage() {
         )}
         <SanidadForm
           initial={edit}
+          animalInicial={animalInicial}
           readOnly={!!edit && mode === "view"}
-          onSaved={() => setOpen(false)}
-          onCancel={() => setOpen(false)}
+          onSaved={() => {
+            setOpen(false);
+            setAnimalInicial("");
+          }}
+          onCancel={() => {
+            setOpen(false);
+            setAnimalInicial("");
+          }}
         />
       </Modal>
     </div>
@@ -427,11 +440,13 @@ export default function SanidadPage() {
 
 function SanidadForm({
   initial,
+  animalInicial = "",
   readOnly = false,
   onSaved,
   onCancel,
 }: {
   initial: SanidadEvento | null;
+  animalInicial?: string;
   readOnly?: boolean;
   onSaved: () => void;
   onCancel: () => void;
@@ -440,7 +455,7 @@ function SanidadForm({
   const [form, setForm] = useState<SanidadEvento>(
     initial ?? {
       id: uid(),
-      animalId: "",
+      animalId: animalInicial,
       tipo: "vacuna",
       producto: "",
       fecha: todayISO(),

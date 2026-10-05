@@ -105,7 +105,7 @@ export function RecorridoBienvenida() {
             animal, va anotando todo lo que le pasa:
           </p>
           <ol className="mt-3 flex flex-col gap-2 text-sm">
-            <li className="flex gap-3"><Num n={1} /> El animal: chapeta, raza, sexo y nacimiento.</li>
+            <li className="flex gap-3"><Num n={1} /> El animal: chapeta o nombre, qué animal es y su edad.</li>
             <li className="flex gap-3"><Num n={2} /> Sus vacunas, purgas y tratamientos.</li>
             <li className="flex gap-3"><Num n={3} /> Sus pesos, servicios y partos.</li>
           </ol>
@@ -238,16 +238,8 @@ export function PrimerosPasos() {
       hecho: db.animales.length > 0,
       ruta: "/animales",
       titulo: "Registre su primer animal",
-      como: "Ponga el número de chapeta o un nombre, la raza, el sexo y la fecha de nacimiento (si no la sabe, una aproximada). Toma un minuto.",
+      como: "Basta con la chapeta o un nombre, qué animal es (vaca, novilla, toro…) y su edad aproximada. Toma menos de un minuto.",
       boton: "Registrar animal",
-    },
-    {
-      id: "sanidad",
-      hecho: db.sanidad.length > 0,
-      ruta: "/sanidad",
-      titulo: "Anote una vacuna o una purga",
-      como: "Escoja el animal, el tipo (vacuna, purga o tratamiento), el producto y la fecha. Ponga la próxima fecha y RumeApp se la recuerda.",
-      boton: "Anotar vacuna o purga",
     },
     {
       id: "gasto",
@@ -256,6 +248,14 @@ export function PrimerosPasos() {
       titulo: "Anote un gasto",
       como: "Qué compró (sal, jornal, vacunas), cuánto costó y quién lo pagó. Si tiene socios, la app lo reparte según el porcentaje de cada uno.",
       boton: "Anotar gasto",
+    },
+    {
+      id: "sanidad",
+      hecho: db.sanidad.length > 0,
+      ruta: "/sanidad",
+      titulo: "Anote una vacuna o una purga",
+      como: "Escoja el animal, el tipo (vacuna, purga o tratamiento), el producto y la fecha. Ponga la próxima fecha y RumeApp se la recuerda.",
+      boton: "Anotar vacuna o purga",
     },
     {
       id: "tarea",

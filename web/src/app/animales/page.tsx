@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useDB } from "@/lib/useDB";
-import { useAbrirNuevo } from "@/lib/tutorial";
+import { hrefNuevo, useAbrirNuevo } from "@/lib/tutorial";
 import { updateCollection, uid, nowISO } from "@/lib/storage";
-import { edadTexto, fmtDate, fmtCOP, fmtNumber, diasHasta, todayISO } from "@/lib/format";
+import { edadTexto, fmtDate, fmtCOP, fmtNumber, diasHasta, todayISO, ymdLocal } from "@/lib/format";
 import {
   Animal,
   CATEGORIAS_ANIMAL,
@@ -15,6 +16,7 @@ import {
   DBState,
 } from "@/lib/types";
 import Modal from "@/components/Modal";
+import { IconCheck, IconCow, IconHealth, IconMoney } from "@/components/icons";
 import FormRow from "@/components/FormRow";
 import PhotoInput from "@/components/PhotoInput";
 import HeroStat from "@/components/HeroStat";
@@ -39,11 +41,21 @@ export default function AnimalesPage() {
   const [edit, setEdit] = useState<Animal | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [detailAnimal, setDetailAnimal] = useState<Animal | null>(null);
+  // Animal recién registrado: en vez de cerrar, el modal felicita y ofrece
+  // el siguiente paso. `formKey` reinicia el formulario para "registrar otro".
+  const [guardado, setGuardado] = useState<Guardado | null>(null);
+  const [formKey, setFormKey] = useState(0);
   // Desde el tutorial de primeros pasos: /animales?nuevo=1 abre el formulario.
   useAbrirNuevo(() => {
     setEdit(null);
+    setGuardado(null);
     setOpen(true);
   }, ready);
+
+  function cerrarForm() {
+    setOpen(false);
+    setGuardado(null);
+  }
 
   const filtered = useMemo(() => {
     if (!db) return [];
@@ -329,14 +341,28 @@ export default function AnimalesPage() {
 
       <Modal
         open={open}
-        onClose={() => setOpen(false)}
-        title={edit ? `Editar animal #${edit.nroIdentificacion}` : "Nuevo animal"}
+        onClose={cerrarForm}
+        title={
+          guardado ? "¡Listo!" : edit ? `Editar animal #${edit.nroIdentificacion}` : "Nuevo animal"
+        }
       >
-        <AnimalForm
-          initial={edit}
-          onSaved={() => setOpen(false)}
-          onCancel={() => setOpen(false)}
-        />
+        {guardado ? (
+          <Felicitacion
+            guardado={guardado}
+            onOtro={() => {
+              setGuardado(null);
+              setFormKey((k) => k + 1);
+            }}
+            onCerrar={cerrarForm}
+          />
+        ) : (
+          <AnimalForm
+            key={formKey}
+            initial={edit}
+            onSaved={(g) => (g ? setGuardado(g) : cerrarForm())}
+            onCancel={cerrarForm}
+          />
+        )}
       </Modal>
 
       <Modal
@@ -771,17 +797,69 @@ function EmptyLine({ label }: { label: string }) {
   return <div className="text-xs text-muted italic px-2">{label}</div>;
 }
 
+// La categoría ya dice el sexo: el formulario los mantiene de acuerdo.
+const SEXO_DE_CATEGORIA: Record<CategoriaAnimal, Sexo> = {
+  vaca: "hembra",
+  novilla: "hembra",
+  ternera: "hembra",
+  toro: "macho",
+  novillo: "macho",
+  ternero: "macho",
+};
+
+// "¿Qué animal es?" del formulario básico: categoría y sexo en un solo campo.
+const TIPOS_BASICO: CategoriaAnimal[] = ["vaca", "novilla", "ternera", "toro", "novillo", "ternero"];
+
+// Edad aproximada en meses. Casi nadie sabe la fecha exacta de nacimiento;
+// con la edad se calcula una fecha y el animal queda marcado como aproximado.
+const EDADES: { meses: number; label: string }[] = [
+  { meses: 6, label: "Menos de 1 año" },
+  ...Array.from({ length: 14 }, (_, i) => ({
+    meses: (i + 1) * 12,
+    label: i === 0 ? "1 año" : `${i + 1} años`,
+  })),
+  { meses: 180, label: "15 años o más" },
+];
+
+function fechaDesdeEdad(meses: number): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() - meses);
+  return ymdLocal(d);
+}
+
+/** Siguiente número libre ("001", "002"…) para un animal sin chapeta. */
+function siguienteNumero(animales: Animal[]): string {
+  const max = animales.reduce((m, a) => {
+    const n = /^\d+$/.test(a.nroIdentificacion) ? Number(a.nroIdentificacion) : 0;
+    return n > m ? n : m;
+  }, 0);
+  return String(max + 1).padStart(3, "0");
+}
+
+interface Guardado {
+  animal: Animal;
+  /** El usuario no puso chapeta y la app le asignó un número. */
+  nroAuto: boolean;
+  primero: boolean;
+}
+
 function AnimalForm({
   initial,
   onSaved,
   onCancel,
 }: {
   initial: Animal | null;
-  onSaved: () => void;
+  /** Con un animal nuevo recibe sus datos (para felicitar); al editar, null. */
+  onSaved: (g: Guardado | null) => void;
   onCancel: () => void;
 }) {
   const { db } = useDB();
   const { activa } = useFincaActiva();
+  // Animal nuevo: formulario básico (lo mínimo). "Más datos" pasa al
+  // completo sin perder lo escrito. Editar siempre muestra el completo.
+  const [completo, setCompleto] = useState(!!initial);
+  const [error, setError] = useState<string | null>(null);
+  const [edadMeses, setEdadMeses] = useState("");
   const [form, setForm] = useState<Animal>(
     initial ?? {
       id: uid(),
@@ -789,17 +867,42 @@ function AnimalForm({
       nombre: "",
       sexo: "hembra",
       raza: "",
-      fechaNacimiento: todayISO(),
+      // Vacía a propósito: antes venía en "hoy" y se guardaban vacas nacidas hoy.
+      fechaNacimiento: "",
       categoria: "vaca",
       estado: "activo",
       createdAt: nowISO(),
     }
   );
 
+  function setCategoria(categoria: CategoriaAnimal) {
+    setForm({ ...form, categoria, sexo: SEXO_DE_CATEGORIA[categoria] });
+  }
+
+  function setEdad(valor: string) {
+    setEdadMeses(valor);
+    if (valor) {
+      setForm({ ...form, fechaNacimiento: fechaDesdeEdad(Number(valor)), fechaNacimientoAprox: true });
+    } else {
+      setForm({ ...form, fechaNacimiento: "", fechaNacimientoAprox: false });
+    }
+  }
+
   function save(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.nroIdentificacion.trim()) {
-      alert("El número de identificación es obligatorio");
+    setError(null);
+    const nro = form.nroIdentificacion.trim();
+    const nombre = form.nombre?.trim() ?? "";
+    if (!nro && !nombre) {
+      setError("Escriba el número de chapeta o un nombre para el animal.");
+      return;
+    }
+    if (!form.fechaNacimiento) {
+      setError(
+        completo
+          ? "Ponga la fecha de nacimiento o escoja la edad aproximada."
+          : "Escoja la edad aproximada del animal."
+      );
       return;
     }
     // Bloqueo por plan solo al AGREGAR (edición no chequea porque no cambia count).
@@ -807,48 +910,133 @@ function AnimalForm({
       const plan = planEfectivo(activa);
       const limit = PLAN_LIMITS[plan].maxAnimales;
       if (limit !== null && db.animales.length >= limit) {
-        alert(
-          `Alcanzaste el límite de ${limit} animales del plan ${planLabel(plan)}. Ve a la sección Plan para cambiar de plan.`
+        setError(
+          `Llegó al límite de ${limit} animales del plan ${planLabel(plan)}. Vaya a la sección Plan para cambiar de plan.`
         );
         return;
       }
     }
+    const animal: Animal = {
+      ...form,
+      nroIdentificacion: nro || siguienteNumero(db?.animales ?? []),
+      nombre,
+      raza: form.raza.trim(),
+    };
+    const primero = !initial && (db?.animales.length ?? 0) === 0;
     updateCollection("animales", (list) => {
-      const withoutOld = list.filter((a) => a.id !== form.id);
-      return [...withoutOld, form];
+      const withoutOld = list.filter((a) => a.id !== animal.id);
+      return [...withoutOld, animal];
     });
-    onSaved();
+    onSaved(initial ? null : { animal, nroAuto: !nro, primero });
   }
 
   function remove() {
     if (!initial) return;
     if (!confirm("¿Eliminar este animal? Esta acción no se puede deshacer.")) return;
     updateCollection("animales", (list) => list.filter((a) => a.id !== initial.id));
-    onSaved();
+    onSaved(null);
+  }
+
+  const campoChapeta = (
+    <FormRow label="Nº de chapeta" hint={completo ? undefined : "Si no tiene, déjelo vacío y le ponemos uno"}>
+      <input
+        value={form.nroIdentificacion}
+        onChange={(e) => setForm({ ...form, nroIdentificacion: e.target.value })}
+        placeholder="011"
+        inputMode="text"
+        autoFocus={!initial}
+      />
+    </FormRow>
+  );
+  const campoNombre = (
+    <FormRow label="Nombre">
+      <input
+        value={form.nombre ?? ""}
+        onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+        placeholder="Ej. Luna"
+      />
+    </FormRow>
+  );
+  const campoRaza = (
+    <FormRow label={completo ? "Raza" : "Raza (opcional)"}>
+      <input
+        value={form.raza}
+        onChange={(e) => setForm({ ...form, raza: e.target.value })}
+        placeholder="Ej. Gyr Holstein"
+      />
+    </FormRow>
+  );
+  const campoEdad = (
+    <FormRow label="Edad aproximada" required={!completo}>
+      <select value={edadMeses} onChange={(e) => setEdad(e.target.value)}>
+        <option value="">{completo ? "…o escoja la edad" : "Escoja la edad"}</option>
+        {EDADES.map((ed) => (
+          <option key={ed.meses} value={ed.meses}>{ed.label}</option>
+        ))}
+      </select>
+    </FormRow>
+  );
+  const avisoError = error && (
+    <div className="md:col-span-2 text-sm text-danger bg-danger/10 px-3 py-2 rounded-lg">{error}</div>
+  );
+
+  if (!completo) {
+    return (
+      <form onSubmit={save} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <p className="md:col-span-2 text-sm text-muted -mt-1">
+          Con estos datos basta para empezar. Lo demás lo puede agregar después.
+        </p>
+        {campoChapeta}
+        {campoNombre}
+        <FormRow label="¿Qué animal es?" required>
+          <select
+            value={form.categoria}
+            onChange={(e) => setCategoria(e.target.value as CategoriaAnimal)}
+          >
+            {TIPOS_BASICO.map((c) => (
+              <option key={c} value={c}>
+                {CATEGORIAS_ANIMAL.find((x) => x.value === c)?.label ?? c}
+              </option>
+            ))}
+          </select>
+        </FormRow>
+        {campoEdad}
+        {campoRaza}
+
+        {avisoError}
+
+        <div className="md:col-span-2 flex flex-col gap-2 pt-1">
+          <button type="submit" className="btn btn-primary justify-center">
+            Guardar animal
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost justify-center"
+            onClick={() => {
+              setError(null);
+              setCompleto(true);
+            }}
+          >
+            + Agregar más datos (foto, potrero, madre, padre…)
+          </button>
+        </div>
+      </form>
+    );
   }
 
   return (
     <form onSubmit={save} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <FormRow label="Foto" colspan={2}>
-        <PhotoInput
-          value={form.fotoUrl}
-          onChange={(v) => setForm({ ...form, fotoUrl: v })}
-          fallbackLabel={form.nroIdentificacion || "Sin foto"}
-        />
-      </FormRow>
-      <FormRow label="Nº de identificación" required>
-        <input
-          value={form.nroIdentificacion}
-          onChange={(e) => setForm({ ...form, nroIdentificacion: e.target.value })}
-          placeholder="011"
-        />
-      </FormRow>
-      <FormRow label="Nombre">
-        <input
-          value={form.nombre ?? ""}
-          onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-          placeholder="Ej. Luna"
-        />
+      {campoChapeta}
+      {campoNombre}
+      <FormRow label="Categoría" required>
+        <select
+          value={form.categoria}
+          onChange={(e) => setCategoria(e.target.value as CategoriaAnimal)}
+        >
+          {CATEGORIAS_ANIMAL.map((c) => (
+            <option key={c.value} value={c.value}>{c.label}</option>
+          ))}
+        </select>
       </FormRow>
       <FormRow label="Sexo" required>
         <select
@@ -859,30 +1047,19 @@ function AnimalForm({
           <option value="macho">Macho</option>
         </select>
       </FormRow>
-      <FormRow label="Categoría" required>
-        <select
-          value={form.categoria}
-          onChange={(e) => setForm({ ...form, categoria: e.target.value as CategoriaAnimal })}
-        >
-          {CATEGORIAS_ANIMAL.map((c) => (
-            <option key={c.value} value={c.value}>{c.label}</option>
-          ))}
-        </select>
-      </FormRow>
-      <FormRow label="Raza" required>
-        <input
-          value={form.raza}
-          onChange={(e) => setForm({ ...form, raza: e.target.value })}
-          placeholder="Ej. Gyr Holstein"
-        />
-      </FormRow>
+      {campoRaza}
       <FormRow label="Fecha de nacimiento" required>
         <input
           type="date"
           value={form.fechaNacimiento.slice(0, 10)}
-          onChange={(e) => setForm({ ...form, fechaNacimiento: e.target.value })}
+          max={todayISO()}
+          onChange={(e) => {
+            setEdadMeses("");
+            setForm({ ...form, fechaNacimiento: e.target.value, fechaNacimientoAprox: false });
+          }}
         />
       </FormRow>
+      {campoEdad}
       <FormRow label="Potrero">
         <select
           value={form.potreroId ?? ""}
@@ -988,6 +1165,15 @@ function AnimalForm({
           onChange={(e) => setForm({ ...form, notas: e.target.value })}
         />
       </FormRow>
+      <FormRow label="Foto" colspan={2}>
+        <PhotoInput
+          value={form.fotoUrl}
+          onChange={(v) => setForm({ ...form, fotoUrl: v })}
+          fallbackLabel={form.nroIdentificacion || "Sin foto"}
+        />
+      </FormRow>
+
+      {avisoError}
 
       <div className="md:col-span-2 flex items-center justify-between pt-2">
         <div>
@@ -995,7 +1181,11 @@ function AnimalForm({
             <button type="button" className="btn btn-danger" onClick={remove}>
               Eliminar
             </button>
-          ) : null}
+          ) : (
+            <button type="button" className="btn btn-ghost" onClick={() => setCompleto(false)}>
+              ← Formulario corto
+            </button>
+          )}
         </div>
         <div className="flex gap-2">
           <button type="button" className="btn btn-ghost" onClick={onCancel}>
@@ -1007,5 +1197,105 @@ function AnimalForm({
         </div>
       </div>
     </form>
+  );
+}
+
+// ---------------------------------------------------------------------------
+//  Después de registrar un animal nuevo: felicitación y "¿qué desea hacer
+//  ahora?". El gasto va primero: es el siguiente paso que más engancha
+//  (ver cuánto le cuesta la finca) y no depende de tener más animales.
+
+function Felicitacion({
+  guardado,
+  onOtro,
+  onCerrar,
+}: {
+  guardado: Guardado;
+  onOtro: () => void;
+  onCerrar: () => void;
+}) {
+  const router = useRouter();
+  const { animal, nroAuto, primero } = guardado;
+  const nombreAnimal = animal.nombre ? `${animal.nombre} (#${animal.nroIdentificacion})` : `#${animal.nroIdentificacion}`;
+
+  const opciones: {
+    Icon: React.ComponentType<{ size?: number }>;
+    titulo: string;
+    sub: string;
+    accion: () => void;
+    sugerida?: boolean;
+  }[] = [
+    {
+      Icon: IconMoney,
+      titulo: "Anotar un gasto",
+      sub: "Sal, jornal, vacunas… y vea cuánto le cuesta la finca",
+      accion: () => router.push(hrefNuevo("/gastos")),
+      sugerida: true,
+    },
+    {
+      Icon: IconCow,
+      titulo: "Registrar otro animal",
+      sub: "Siga armando su hato",
+      accion: onOtro,
+    },
+    {
+      Icon: IconHealth,
+      titulo: `Anotarle una vacuna o purga`,
+      sub: `A ${animal.nombre || `#${animal.nroIdentificacion}`}, con la próxima fecha para que le avisemos`,
+      accion: () => router.push(hrefNuevo("/sanidad", { animal: animal.id })),
+    },
+  ];
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="text-center">
+        <div className="mx-auto w-14 h-14 rounded-full bg-primary text-white flex items-center justify-center">
+          <IconCheck size={28} />
+        </div>
+        <h3 className="mt-3 text-lg font-semibold tracking-tight">
+          {primero ? "¡Registró su primer animal!" : "¡Animal registrado!"}
+        </h3>
+        <p className="text-sm text-muted mt-1">
+          {nombreAnimal} ya está en su hato.
+          {nroAuto && ` Como no tenía chapeta le pusimos el número ${animal.nroIdentificacion}; lo puede cambiar cuando quiera.`}
+        </p>
+      </div>
+
+      <div>
+        <div className="eyebrow mb-2">¿Qué desea hacer ahora?</div>
+        <div className="flex flex-col gap-2">
+          {opciones.map((o) => (
+            <button
+              key={o.titulo}
+              type="button"
+              onClick={o.accion}
+              className={`flex items-center gap-3 text-left rounded-xl border px-3 py-3 transition hover:bg-surface-2 ${
+                o.sugerida ? "border-primary bg-primary-soft/40" : "border-rule"
+              }`}
+            >
+              <span
+                className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                  o.sugerida ? "bg-primary text-white" : "bg-primary-soft text-primary"
+                }`}
+              >
+                <o.Icon size={18} />
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="block text-sm font-semibold">
+                  {o.titulo}
+                  {o.sugerida && <span className="ml-2 text-[0.65rem] font-mono uppercase tracking-wider text-primary">Sugerido</span>}
+                </span>
+                <span className="block text-xs text-muted mt-0.5">{o.sub}</span>
+              </span>
+              <span className="text-muted" aria-hidden>→</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <button type="button" className="btn btn-ghost justify-center" onClick={onCerrar}>
+        Ver mis animales
+      </button>
+    </div>
   );
 }
