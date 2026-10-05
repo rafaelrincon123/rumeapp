@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { PLAN_LIMITS, usageStatus, nextPlan, planLabel, planEfectivo } from "@/lib/plans";
+import { DIAS_PRUEBA, PLAN_LIMITS, usageStatus, nextPlan, planLabel, planEfectivo, puedeProbar } from "@/lib/plans";
 import { useFincaActiva } from "@/lib/useFincaActiva";
 
 interface Props {
@@ -29,6 +29,7 @@ export default function PlanUsageBanner({ resource, used, className = "" }: Prop
   if (limit === null || !status.nearLimit) return null;
 
   const next = nextPlan(plan);
+  const probar = puedeProbar(activa);
   const noun = resource === "animales" ? "animales" : "usuarios";
 
   return (
@@ -48,7 +49,9 @@ export default function PlanUsageBanner({ resource, used, className = "" }: Prop
         {next && (
           <div className="text-xs mt-0.5" style={{ color: "rgba(20,38,26,0.72)" }}>
             {status.atLimit
-              ? `Para agregar más, cambia al plan ${planLabel(next)}.`
+              ? probar
+                ? `Para agregar más, pruebe el plan ${planLabel(next)} gratis por ${DIAS_PRUEBA} días.`
+                : `Para agregar más, cambia al plan ${planLabel(next)}.`
               : `Cuando lo llenes tendrás que pasar al plan ${planLabel(next)}.`}
           </div>
         )}
@@ -59,7 +62,7 @@ export default function PlanUsageBanner({ resource, used, className = "" }: Prop
           className="text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap"
           style={{ background: "var(--forest)", color: "var(--lime-bright)" }}
         >
-          Ver planes →
+          {status.atLimit && probar ? "Probar gratis →" : "Ver planes →"}
         </Link>
       )}
     </div>

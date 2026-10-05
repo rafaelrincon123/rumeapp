@@ -11,6 +11,7 @@ import {
   ArtMi,
 } from "@/components/HomeArt";
 import { PrimerosPasos, RecorridoBienvenida } from "@/components/Tutorial";
+import { AvisoPrueba } from "@/components/OfertaPrueba";
 
 type TileTone = "forest" | "copper" | "moss" | "citrus";
 
@@ -113,6 +114,7 @@ export default function Home() {
   return (
     <div className="relative z-10">
       <RecorridoBienvenida />
+      <AvisoPrueba />
       <PrimerosPasos />
       <div className="grid grid-cols-2 gap-3 md:gap-5 max-w-3xl mx-auto">
         {tiles.map((t) => (

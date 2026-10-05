@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useDB } from "@/lib/useDB";
 import { hrefNuevo, useAbrirNuevo } from "@/lib/tutorial";
@@ -18,6 +18,7 @@ import {
 import Modal from "@/components/Modal";
 import { IconCheck, IconCow, IconHealth, IconMoney } from "@/components/icons";
 import RegistroVarios from "@/components/RegistroVarios";
+import OfertaPrueba from "@/components/OfertaPrueba";
 import {
   EDADES,
   SEXO_DE_CATEGORIA,
@@ -33,7 +34,7 @@ import PhotoInput from "@/components/PhotoInput";
 import HeroStat from "@/components/HeroStat";
 import PlanUsageBanner from "@/components/PlanUsageBanner";
 import ExportarPDFButton from "@/components/ExportarPDFButton";
-import { PLAN_LIMITS, planLabel, planEfectivo } from "@/lib/plans";
+import { PLAN_LIMITS, planEfectivo } from "@/lib/plans";
 import { useFincaActiva } from "@/lib/useFincaActiva";
 
 const ESTADOS: { value: EstadoAnimal; label: string }[] = [
@@ -859,6 +860,8 @@ function AnimalForm({
   // completo sin perder lo escrito. Editar siempre muestra el completo.
   const [completo, setCompleto] = useState(!!initial);
   const [error, setError] = useState<string | null>(null);
+  // Quiso agregar un animal con el plan lleno: se muestra OfertaPrueba.
+  const [limite, setLimite] = useState(false);
   const [edadMeses, setEdadMeses] = useState(plantilla?.edadMeses ?? "");
   const [form, setForm] = useState<Animal>(
     initial ?? {
@@ -916,9 +919,8 @@ function AnimalForm({
       const plan = planEfectivo(activa);
       const limit = PLAN_LIMITS[plan].maxAnimales;
       if (limit !== null && db.animales.length >= limit) {
-        setError(
-          `Llegó al límite de ${limit} animales del plan ${planLabel(plan)}. Vaya a la sección Plan para cambiar de plan.`
-        );
+        // En vez de un error, la oferta de prueba (o el enlace a los planes).
+        setLimite(true);
         return;
       }
     }
@@ -1007,8 +1009,12 @@ function AnimalForm({
       </select>
     </FormRow>
   );
-  const avisoError = error && (
-    <div className="md:col-span-2 text-sm text-danger bg-danger/10 px-3 py-2 rounded-lg">{error}</div>
+  const avisoError = limite ? (
+    <div className="md:col-span-2">
+      <OfertaPrueba motivo="intento" onActivada={() => setLimite(false)} />
+    </div>
+  ) : (
+    error && <div className="md:col-span-2 text-sm text-danger bg-danger/10 px-3 py-2 rounded-lg">{error}</div>
   );
 
   if (!completo) {
@@ -1260,7 +1266,19 @@ function Felicitacion({
   onCerrar: () => void;
 }) {
   const router = useRouter();
+  const { db } = useDB();
+  const { activa } = useFincaActiva();
   const { animales, nroAuto, primero, modo } = guardado;
+  // ¿Con estos animales se llenó el plan? Entonces lo primero es la oferta
+  // de prueba, y "registrar otro/varios" no se ofrece (no cabrían).
+  const limite = activa ? PLAN_LIMITS[planEfectivo(activa)].maxAnimales : null;
+  const llenoAhora = limite !== null && (db?.animales.length ?? 0) >= limite;
+  // Pegajoso: al activar la prueba el límite sube y llenoAhora pasa a false,
+  // pero la oferta debe quedarse para mostrar su "¡Listo!".
+  const [lleno, setLleno] = useState(false);
+  useEffect(() => {
+    if (llenoAhora) setLleno(true);
+  }, [llenoAhora]);
   const animal = animales[animales.length - 1];
   const varios = animales.length > 1;
   const nombreAnimal = animal.nombre ? `${animal.nombre} (#${animal.nroIdentificacion})` : `#${animal.nroIdentificacion}`;
@@ -1306,7 +1324,8 @@ function Felicitacion({
           accion: () => router.push(hrefNuevo("/sanidad", { animal: animal.id })),
         },
   ];
-  if (modo === "uno") {
+  if (lleno) opciones.splice(1, 1);
+  if (modo === "uno" && !lleno) {
     opciones.push({
       Icon: IconCow,
       titulo: "Registrar varios a la vez",
@@ -1336,6 +1355,8 @@ function Felicitacion({
               : ` Como no tenía chapeta le pusimos el número ${animal.nroIdentificacion}; lo puede cambiar cuando quiera.`)}
         </p>
       </div>
+
+      {lleno && <OfertaPrueba motivo="lleno" />}
 
       <div>
         <div className="eyebrow mb-2">¿Qué desea hacer ahora?</div>

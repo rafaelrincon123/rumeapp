@@ -6,6 +6,7 @@ import { useDB } from "@/lib/useDB";
 import { useFincaActiva } from "@/lib/useFincaActiva";
 import { updateCollection, uid, nowISO } from "@/lib/storage";
 import { PLAN_LIMITS, planEfectivo, planLabel } from "@/lib/plans";
+import OfertaPrueba from "./OfertaPrueba";
 import { Animal, CATEGORIAS_ANIMAL, CategoriaAnimal } from "@/lib/types";
 import {
   EDADES,
@@ -100,6 +101,8 @@ export default function RegistroVarios({
   const { activa } = useFincaActiva();
   const [filas, setFilas] = useState<Fila[]>(() => [filaVacia()]);
   const [error, setError] = useState<string | null>(null);
+  // Se pasó del límite del plan: debajo del error va la oferta de prueba.
+  const [lleno, setLleno] = useState(false);
   const [pegando, setPegando] = useState(false);
   const [texto, setTexto] = useState("");
 
@@ -194,6 +197,7 @@ export default function RegistroVarios({
           ? `Ya tiene ${limite} animales, el máximo del plan ${planLabel(plan)}.`
           : `Su plan ${planLabel(plan)} permite ${limite} animales: le caben ${caben} más y está registrando ${conDatos.length}.`
       );
+      setLleno(true);
       return;
     }
 
@@ -356,6 +360,12 @@ export default function RegistroVarios({
       )}
 
       {error && <div className="text-sm text-danger bg-danger/10 px-3 py-2 rounded-lg">{error}</div>}
+      {lleno && (
+        <OfertaPrueba
+          motivo="intento"
+          onActivada={() => setError(null)}
+        />
+      )}
 
       <div className="flex flex-col-reverse md:flex-row md:items-center md:justify-between gap-2 pt-1">
         <button type="button" className="btn btn-ghost" onClick={onUno}>

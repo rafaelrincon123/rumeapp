@@ -86,6 +86,17 @@ export function planEfectivo(finca: Pick<Finca, "plan" | "trialEndsAt" | "planPa
   return "ranchero";
 }
 
+/** Días de la prueba del plan Ganadero que se ofrece al llenar el plan gratis. */
+export const DIAS_PRUEBA = 15;
+
+/**
+ * ¿Puede activar la prueba de Ganadero? Solo fincas en el plan gratis que
+ * nunca tuvieron prueba (trial_ends_at null; espejo de iniciar_prueba_ganadero).
+ */
+export function puedeProbar(finca: Pick<Finca, "plan" | "trialEndsAt" | "planPagado">): boolean {
+  return !finca.planPagado && finca.trialEndsAt === null && planEfectivo(finca) === "ranchero";
+}
+
 /** Días restantes de prueba (0 si no hay prueba activa). */
 export function diasDePruebaRestantes(finca: Pick<Finca, "trialEndsAt" | "planPagado">): number {
   if (finca.planPagado || !finca.trialEndsAt) return 0;

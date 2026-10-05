@@ -13,7 +13,9 @@ import {
   cop,
   precioPeriodo,
   CURSO_REGALO,
+  puedeProbar,
 } from "@/lib/plans";
+import OfertaPrueba from "@/components/OfertaPrueba";
 import { CUENTA_PAGO, registrarSolicitudPlan } from "@/lib/comprobantePago";
 import type { PlanFinca } from "@/lib/types";
 import Modal from "@/components/Modal";
@@ -73,10 +75,11 @@ export default function PlanPage() {
           className="rounded-2xl px-4 py-3 text-sm"
           style={{ background: "rgba(200, 60, 60, 0.10)", border: "1px solid rgba(200, 60, 60, 0.30)" }}
         >
-          Tu prueba de 30 días terminó. Ahora estás en el plan <strong>Ranchero</strong>. Elige un
+          Tu prueba gratis terminó. Ahora estás en el plan <strong>Ranchero</strong>. Elige un
           plan abajo para seguir con más cupo.
         </div>
       )}
+      {puedeProbar(activa) && <OfertaPrueba motivo="plan" />}
 
       {/* Estado actual */}
       <section

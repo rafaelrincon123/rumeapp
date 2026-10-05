@@ -164,6 +164,19 @@ export function emitFincaChanged(): void {
 }
 
 /**
+ * Activa la prueba de 15 días del plan Ganadero (RPC iniciar_prueba_ganadero:
+ * solo el dueño, una vez por finca). Refresca la finca activa al terminar.
+ */
+export async function iniciarPruebaGanadero(fincaId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const sb = getSupabase();
+  const { error } = await sb.rpc("iniciar_prueba_ganadero", { p_finca_id: fincaId });
+  if (error) return { ok: false, error: error.message };
+  try { track("PruebaIniciada", { plan: "ganadero" }); } catch { /* ignore */ }
+  emitFincaChanged();
+  return { ok: true };
+}
+
+/**
  * RPC del servidor: crea una finca + su propietario inicial atómicamente.
  * Devuelve la finca creada.
  */
