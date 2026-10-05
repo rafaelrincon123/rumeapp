@@ -211,6 +211,8 @@ interface Paso {
   como: string;
   boton: string;
   opcional?: boolean;
+  /** Enlace secundario bajo el botón (p. ej. registrar varios a la vez). */
+  alterno?: { texto: string; href: string };
 }
 
 export function PrimerosPasos() {
@@ -240,6 +242,7 @@ export function PrimerosPasos() {
       titulo: "Registre su primer animal",
       como: "Basta con la chapeta o un nombre, qué animal es (vaca, novilla, toro…) y su edad aproximada. Toma menos de un minuto.",
       boton: "Registrar animal",
+      alterno: { texto: "¿Tiene muchos? Regístrelos varios a la vez", href: hrefNuevo("/animales", { modo: "varios" }) },
     },
     {
       id: "gasto",
@@ -341,6 +344,11 @@ export function PrimerosPasos() {
                   <Link href={hrefNuevo(p.ruta)} className="btn btn-primary mt-3 ml-9 inline-flex">
                     {p.boton} →
                   </Link>
+                  {p.alterno && (
+                    <Link href={p.alterno.href} className="block mt-2 ml-9 text-sm text-primary underline underline-offset-4">
+                      {p.alterno.texto}
+                    </Link>
+                  )}
                 </>
               ) : (
                 <Link

@@ -21,7 +21,7 @@ export function hrefNuevo(ruta: string, extra?: Record<string, string>): string 
 }
 
 // Parámetros que hrefNuevo puede poner y que se limpian de la URL al abrir.
-const PARAMS_NUEVO = ["nuevo", "animal"];
+const PARAMS_NUEVO = ["nuevo", "animal", "modo"];
 
 /**
  * Si la página se abrió con `?nuevo=1`, llama a `abrir` una sola vez (con los

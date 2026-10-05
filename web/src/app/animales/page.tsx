@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useDB } from "@/lib/useDB";
 import { hrefNuevo, useAbrirNuevo } from "@/lib/tutorial";
 import { updateCollection, uid, nowISO } from "@/lib/storage";
-import { edadTexto, fmtDate, fmtCOP, fmtNumber, diasHasta, todayISO, ymdLocal } from "@/lib/format";
+import { edadTexto, fmtDate, fmtCOP, fmtNumber, diasHasta, todayISO } from "@/lib/format";
 import {
   Animal,
   CATEGORIAS_ANIMAL,
@@ -17,6 +17,17 @@ import {
 } from "@/lib/types";
 import Modal from "@/components/Modal";
 import { IconCheck, IconCow, IconHealth, IconMoney } from "@/components/icons";
+import RegistroVarios from "@/components/RegistroVarios";
+import {
+  EDADES,
+  SEXO_DE_CATEGORIA,
+  TIPOS_BASICO,
+  Guardado,
+  PlantillaAnimal,
+  chapetaSiguiente,
+  fechaDesdeEdad,
+  siguienteNumero,
+} from "@/lib/animalesForm";
 import FormRow from "@/components/FormRow";
 import PhotoInput from "@/components/PhotoInput";
 import HeroStat from "@/components/HeroStat";
@@ -45,16 +56,36 @@ export default function AnimalesPage() {
   // el siguiente paso. `formKey` reinicia el formulario para "registrar otro".
   const [guardado, setGuardado] = useState<Guardado | null>(null);
   const [formKey, setFormKey] = useState(0);
-  // Desde el tutorial de primeros pasos: /animales?nuevo=1 abre el formulario.
-  useAbrirNuevo(() => {
+  // "uno" = formulario de un animal; "varios" = registrar varios a la vez.
+  const [vista, setVista] = useState<"uno" | "varios">("uno");
+  const [plantilla, setPlantilla] = useState<PlantillaAnimal | undefined>(undefined);
+  // Desde el tutorial de primeros pasos: /animales?nuevo=1 abre el formulario
+  // (con &modo=varios, el registro de varios).
+  useAbrirNuevo((params) => {
+    abrirNuevo(params.get("modo") === "varios" ? "varios" : "uno");
+  }, ready);
+
+  function abrirNuevo(v: "uno" | "varios", p?: PlantillaAnimal) {
     setEdit(null);
     setGuardado(null);
+    setPlantilla(p);
+    setVista(v);
+    setFormKey((k) => k + 1);
     setOpen(true);
-  }, ready);
+  }
+
+  function abrirEdicion(a: Animal) {
+    setEdit(a);
+    setGuardado(null);
+    setPlantilla(undefined);
+    setFormKey((k) => k + 1);
+    setOpen(true);
+  }
 
   function cerrarForm() {
     setOpen(false);
     setGuardado(null);
+    setPlantilla(undefined);
   }
 
   const filtered = useMemo(() => {
@@ -152,13 +183,10 @@ export default function AnimalesPage() {
             filas={filtered}
             nombreArchivo="animales"
           />
-          <button
-            className="btn btn-primary"
-            onClick={() => {
-              setEdit(null);
-              setOpen(true);
-            }}
-          >
+          <button className="btn" onClick={() => abrirNuevo("varios")}>
+            Varios a la vez
+          </button>
+          <button className="btn btn-primary" onClick={() => abrirNuevo("uno")}>
             + Nuevo animal
           </button>
         </div>
@@ -246,8 +274,7 @@ export default function AnimalesPage() {
                       <button
                         className="text-xs text-accent hover:underline font-medium"
                         onClick={() => {
-                          setEdit(a);
-                          setOpen(true);
+                          abrirEdicion(a);
                         }}
                       >
                         editar
@@ -343,24 +370,38 @@ export default function AnimalesPage() {
         open={open}
         onClose={cerrarForm}
         title={
-          guardado ? "¡Listo!" : edit ? `Editar animal #${edit.nroIdentificacion}` : "Nuevo animal"
+          guardado
+            ? "¡Listo!"
+            : edit
+              ? `Editar animal #${edit.nroIdentificacion}`
+              : vista === "varios"
+                ? "Varios animales a la vez"
+                : "Nuevo animal"
         }
+        size={!guardado && !edit && vista === "varios" ? "lg" : "md"}
       >
         {guardado ? (
           <Felicitacion
             guardado={guardado}
-            onOtro={() => {
-              setGuardado(null);
-              setFormKey((k) => k + 1);
-            }}
+            onOtro={() => abrirNuevo("uno", guardado.plantilla)}
+            onVarios={() => abrirNuevo("varios")}
             onCerrar={cerrarForm}
+          />
+        ) : !edit && vista === "varios" ? (
+          <RegistroVarios
+            key={formKey}
+            onSaved={setGuardado}
+            onCancel={cerrarForm}
+            onUno={() => abrirNuevo("uno")}
           />
         ) : (
           <AnimalForm
             key={formKey}
             initial={edit}
+            plantilla={plantilla}
             onSaved={(g) => (g ? setGuardado(g) : cerrarForm())}
             onCancel={cerrarForm}
+            onVarios={edit ? undefined : () => abrirNuevo("varios")}
           />
         )}
       </Modal>
@@ -381,9 +422,8 @@ export default function AnimalesPage() {
             animal={detailAnimal}
             db={db}
             onEdit={() => {
-              setEdit(detailAnimal);
               setOpenDetail(false);
-              setOpen(true);
+              abrirEdicion(detailAnimal);
             }}
             onClose={() => setOpenDetail(false)}
           />
@@ -797,61 +837,21 @@ function EmptyLine({ label }: { label: string }) {
   return <div className="text-xs text-muted italic px-2">{label}</div>;
 }
 
-// La categoría ya dice el sexo: el formulario los mantiene de acuerdo.
-const SEXO_DE_CATEGORIA: Record<CategoriaAnimal, Sexo> = {
-  vaca: "hembra",
-  novilla: "hembra",
-  ternera: "hembra",
-  toro: "macho",
-  novillo: "macho",
-  ternero: "macho",
-};
-
-// "¿Qué animal es?" del formulario básico: categoría y sexo en un solo campo.
-const TIPOS_BASICO: CategoriaAnimal[] = ["vaca", "novilla", "ternera", "toro", "novillo", "ternero"];
-
-// Edad aproximada en meses. Casi nadie sabe la fecha exacta de nacimiento;
-// con la edad se calcula una fecha y el animal queda marcado como aproximado.
-const EDADES: { meses: number; label: string }[] = [
-  { meses: 6, label: "Menos de 1 año" },
-  ...Array.from({ length: 14 }, (_, i) => ({
-    meses: (i + 1) * 12,
-    label: i === 0 ? "1 año" : `${i + 1} años`,
-  })),
-  { meses: 180, label: "15 años o más" },
-];
-
-function fechaDesdeEdad(meses: number): string {
-  const d = new Date();
-  d.setMonth(d.getMonth() - meses);
-  return ymdLocal(d);
-}
-
-/** Siguiente número libre ("001", "002"…) para un animal sin chapeta. */
-function siguienteNumero(animales: Animal[]): string {
-  const max = animales.reduce((m, a) => {
-    const n = /^\d+$/.test(a.nroIdentificacion) ? Number(a.nroIdentificacion) : 0;
-    return n > m ? n : m;
-  }, 0);
-  return String(max + 1).padStart(3, "0");
-}
-
-interface Guardado {
-  animal: Animal;
-  /** El usuario no puso chapeta y la app le asignó un número. */
-  nroAuto: boolean;
-  primero: boolean;
-}
-
 function AnimalForm({
   initial,
+  plantilla,
   onSaved,
   onCancel,
+  onVarios,
 }: {
   initial: Animal | null;
+  /** Datos copiados del animal anterior ("Registrar otro animal"). */
+  plantilla?: PlantillaAnimal;
   /** Con un animal nuevo recibe sus datos (para felicitar); al editar, null. */
   onSaved: (g: Guardado | null) => void;
   onCancel: () => void;
+  /** Pasa al registro de varios animales a la vez. */
+  onVarios?: () => void;
 }) {
   const { db } = useDB();
   const { activa } = useFincaActiva();
@@ -859,11 +859,11 @@ function AnimalForm({
   // completo sin perder lo escrito. Editar siempre muestra el completo.
   const [completo, setCompleto] = useState(!!initial);
   const [error, setError] = useState<string | null>(null);
-  const [edadMeses, setEdadMeses] = useState("");
+  const [edadMeses, setEdadMeses] = useState(plantilla?.edadMeses ?? "");
   const [form, setForm] = useState<Animal>(
     initial ?? {
       id: uid(),
-      nroIdentificacion: "",
+      nroIdentificacion: plantilla?.chapeta ?? "",
       nombre: "",
       sexo: "hembra",
       raza: "",
@@ -872,6 +872,7 @@ function AnimalForm({
       categoria: "vaca",
       estado: "activo",
       createdAt: nowISO(),
+      ...plantilla?.datos,
     }
   );
 
@@ -905,6 +906,11 @@ function AnimalForm({
       );
       return;
     }
+    const repetido = nro && db?.animales.find((a) => a.nroIdentificacion === nro && a.id !== form.id);
+    if (repetido) {
+      setError(`Ya hay un animal con la chapeta ${nro}${repetido.nombre ? ` (${repetido.nombre})` : ""}. Use otro número.`);
+      return;
+    }
     // Bloqueo por plan solo al AGREGAR (edición no chequea porque no cambia count).
     if (!initial && db && activa) {
       const plan = planEfectivo(activa);
@@ -927,7 +933,32 @@ function AnimalForm({
       const withoutOld = list.filter((a) => a.id !== animal.id);
       return [...withoutOld, animal];
     });
-    onSaved(initial ? null : { animal, nroAuto: !nro, primero });
+    onSaved(
+      initial
+        ? null
+        : {
+            animales: [animal],
+            nroAuto: !nro,
+            primero,
+            modo: "uno",
+            plantilla: {
+              datos: {
+                categoria: animal.categoria,
+                sexo: animal.sexo,
+                raza: animal.raza,
+                fechaNacimiento: animal.fechaNacimiento,
+                fechaNacimientoAprox: animal.fechaNacimientoAprox,
+                potreroId: animal.potreroId,
+                propietarioId: animal.propietarioId,
+              },
+              edadMeses,
+              chapeta: chapetaSiguiente(
+                animal.nroIdentificacion,
+                new Set([...(db?.animales ?? []).map((a) => a.nroIdentificacion), animal.nroIdentificacion])
+              ),
+            },
+          }
+    );
   }
 
   function remove() {
@@ -984,8 +1015,19 @@ function AnimalForm({
     return (
       <form onSubmit={save} className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <p className="md:col-span-2 text-sm text-muted -mt-1">
-          Con estos datos basta para empezar. Lo demás lo puede agregar después.
+          {plantilla
+            ? "Copiamos los datos del anterior: cambie solo lo que sea distinto."
+            : "Con estos datos basta para empezar. Lo demás lo puede agregar después."}
         </p>
+        {onVarios && (
+          <button
+            type="button"
+            onClick={onVarios}
+            className="md:col-span-2 -mt-2 text-left text-sm font-medium text-primary underline underline-offset-4"
+          >
+            ¿Tiene varios animales? Regístrelos todos de una vez →
+          </button>
+        )}
         {campoChapeta}
         {campoNombre}
         <FormRow label="¿Qué animal es?" required>
@@ -1208,14 +1250,19 @@ function AnimalForm({
 function Felicitacion({
   guardado,
   onOtro,
+  onVarios,
   onCerrar,
 }: {
   guardado: Guardado;
+  /** Otro animal, con los datos del anterior copiados. */
   onOtro: () => void;
+  onVarios: () => void;
   onCerrar: () => void;
 }) {
   const router = useRouter();
-  const { animal, nroAuto, primero } = guardado;
+  const { animales, nroAuto, primero, modo } = guardado;
+  const animal = animales[animales.length - 1];
+  const varios = animales.length > 1;
   const nombreAnimal = animal.nombre ? `${animal.nombre} (#${animal.nroIdentificacion})` : `#${animal.nroIdentificacion}`;
 
   const opciones: {
@@ -1232,19 +1279,41 @@ function Felicitacion({
       accion: () => router.push(hrefNuevo("/gastos")),
       sugerida: true,
     },
-    {
-      Icon: IconCow,
-      titulo: "Registrar otro animal",
-      sub: "Siga armando su hato",
-      accion: onOtro,
-    },
-    {
-      Icon: IconHealth,
-      titulo: `Anotarle una vacuna o purga`,
-      sub: `A ${animal.nombre || `#${animal.nroIdentificacion}`}, con la próxima fecha para que le avisemos`,
-      accion: () => router.push(hrefNuevo("/sanidad", { animal: animal.id })),
-    },
+    modo === "varios"
+      ? {
+          Icon: IconCow,
+          titulo: "Registrar más animales",
+          sub: "Otra tanda, varios a la vez",
+          accion: onVarios,
+        }
+      : {
+          Icon: IconCow,
+          titulo: "Registrar otro animal",
+          sub: "Le copiamos los datos de este; cambie solo lo distinto",
+          accion: onOtro,
+        },
+    varios
+      ? {
+          Icon: IconHealth,
+          titulo: "Anotar una vacuna o purga",
+          sub: "Con la próxima fecha para que le avisemos",
+          accion: () => router.push(hrefNuevo("/sanidad")),
+        }
+      : {
+          Icon: IconHealth,
+          titulo: "Anotarle una vacuna o purga",
+          sub: `A ${animal.nombre || `#${animal.nroIdentificacion}`}, con la próxima fecha para que le avisemos`,
+          accion: () => router.push(hrefNuevo("/sanidad", { animal: animal.id })),
+        },
   ];
+  if (modo === "uno") {
+    opciones.push({
+      Icon: IconCow,
+      titulo: "Registrar varios a la vez",
+      sub: "Si tiene muchos animales, en una sola pantalla",
+      accion: onVarios,
+    });
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -1253,11 +1322,18 @@ function Felicitacion({
           <IconCheck size={28} />
         </div>
         <h3 className="mt-3 text-lg font-semibold tracking-tight">
-          {primero ? "¡Registró su primer animal!" : "¡Animal registrado!"}
+          {varios
+            ? `¡Registró ${animales.length} animales!`
+            : primero
+              ? "¡Registró su primer animal!"
+              : "¡Animal registrado!"}
         </h3>
         <p className="text-sm text-muted mt-1">
-          {nombreAnimal} ya está en su hato.
-          {nroAuto && ` Como no tenía chapeta le pusimos el número ${animal.nroIdentificacion}; lo puede cambiar cuando quiera.`}
+          {varios ? "Ya están en su hato." : `${nombreAnimal} ya está en su hato.`}
+          {nroAuto &&
+            (varios
+              ? " A los que no tenían chapeta les pusimos un número; lo puede cambiar cuando quiera."
+              : ` Como no tenía chapeta le pusimos el número ${animal.nroIdentificacion}; lo puede cambiar cuando quiera.`)}
         </p>
       </div>
 
