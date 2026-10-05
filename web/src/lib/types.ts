@@ -189,6 +189,8 @@ export interface Finca {
   trialEndsAt: string | null;
   /** true cuando Rafael confirmó un pago real (manual, hasta que exista Stripe/Wompi/PayU). */
   planPagado: boolean;
+  /** Hasta cuándo dura el plan pagado en línea (Bold). null = sin vencimiento (pagos manuales). */
+  planPagadoHasta: string | null;
 }
 
 export type RolFinca = "owner" | "admin" | "operario" | "viewer";

@@ -391,8 +391,8 @@ function Card({
           {gratis
             ? "Sin tarjeta · Para siempre"
             : anual
-            ? "Un pago al año por transferencia"
-            : "Pago mensual por transferencia"}
+            ? "Un pago al año · tarjeta, PSE o Nequi"
+            : "Pago mensual · tarjeta, PSE o Nequi"}
         </div>
       </div>
     </div>

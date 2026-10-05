@@ -19,6 +19,7 @@ interface RowFinca {
   created_at: string;
   trial_ends_at: string | null;
   plan_pagado: boolean;
+  plan_pagado_hasta: string | null;
 }
 
 function fromRow(row: RowFinca): Finca {
@@ -31,6 +32,7 @@ function fromRow(row: RowFinca): Finca {
     createdAt: row.created_at,
     trialEndsAt: row.trial_ends_at,
     planPagado: row.plan_pagado,
+    planPagadoHasta: row.plan_pagado_hasta,
   };
 }
 
@@ -49,7 +51,7 @@ async function fetchFincas(): Promise<Finca[]> {
   if (!sessionData.session) return [];
   const { data, error } = await sb
     .from("fincas")
-    .select("id, nombre, owner_user_id, plan, timezone, created_at, trial_ends_at, plan_pagado")
+    .select("id, nombre, owner_user_id, plan, timezone, created_at, trial_ends_at, plan_pagado, plan_pagado_hasta")
     .order("created_at", { ascending: true });
   if (error) {
     console.error("[useFincaActiva] fetch fincas", error);

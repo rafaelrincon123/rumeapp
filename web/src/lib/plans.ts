@@ -80,8 +80,12 @@ export function fmtPrecio(plan: PlanFinca): string {
  * base de datos igual los hace cumplir vía triggers, esto es solo para
  * que la UI muestre lo correcto sin esperar un error del servidor.
  */
-export function planEfectivo(finca: Pick<Finca, "plan" | "trialEndsAt" | "planPagado">): PlanFinca {
-  if (finca.planPagado) return finca.plan;
+export function planEfectivo(
+  finca: Pick<Finca, "plan" | "trialEndsAt" | "planPagado"> & { planPagadoHasta?: string | null }
+): PlanFinca {
+  if (finca.planPagado && (!finca.planPagadoHasta || new Date(finca.planPagadoHasta) > new Date())) {
+    return finca.plan;
+  }
   if (finca.trialEndsAt && new Date(finca.trialEndsAt) > new Date()) return finca.plan;
   return "ranchero";
 }

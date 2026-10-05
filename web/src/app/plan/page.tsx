@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useDB } from "@/lib/useDB";
-import { useFincaActiva } from "@/lib/useFincaActiva";
+import { emitFincaChanged, useFincaActiva } from "@/lib/useFincaActiva";
+import { crearPagoBold, pintarBotonBold, verificarPagoBold, type EstadoPagoBold } from "@/lib/bold";
+import { fmtDate } from "@/lib/format";
 import {
   PLAN_LIMITS,
   type Periodo,
@@ -33,6 +35,31 @@ export default function PlanPage() {
       setPagando({ plan: p, periodo: "mensual" });
       window.history.replaceState(null, "", "/plan");
     }
+  }, []);
+
+  // De vuelta de Bold: /plan?bold-order-id=…&bold-tx-status=… → se verifica
+  // el pago en el servidor (no se confía en el estado que trae la URL).
+  const [regresoBold, setRegresoBold] = useState<{ orderId: string; estado: EstadoPagoBold | "verificando" | "error"; error?: string } | null>(null);
+  useEffect(() => {
+    const orderId = new URLSearchParams(window.location.search).get("bold-order-id");
+    if (!orderId) return;
+    window.history.replaceState(null, "", "/plan");
+    setRegresoBold({ orderId, estado: "verificando" });
+    let intentos = 0;
+    const verificar = () => {
+      verificarPagoBold(orderId)
+        .then((r) => {
+          // PSE y algunos pagos tardan en confirmarse: se reintenta un rato.
+          if (r.estado === "pendiente" && intentos++ < 6) {
+            setTimeout(verificar, 5000);
+            return;
+          }
+          setRegresoBold({ orderId, estado: r.estado });
+          if (r.estado === "aprobado") emitFincaChanged();
+        })
+        .catch((e: Error) => setRegresoBold({ orderId, estado: "error", error: e.message }));
+    };
+    verificar();
   }, []);
 
   const usage = useMemo(() => {
@@ -80,6 +107,25 @@ export default function PlanPage() {
         </div>
       )}
       {puedeProbar(activa) && <OfertaPrueba motivo="plan" />}
+      {activa.planPagado && activa.planPagadoHasta && (
+        <div
+          className="rounded-2xl px-4 py-3 text-sm"
+          style={{ background: "rgba(184, 206, 122, 0.2)", border: "1px solid rgba(20,38,26,0.15)" }}
+        >
+          {new Date(activa.planPagadoHasta) > new Date() ? (
+            <>
+              Su plan <strong>{planLabel(activa.plan)}</strong> está pagado hasta el{" "}
+              <strong>{fmtDate(activa.planPagadoHasta)}</strong>. Para seguir sin interrupciones,
+              renuévelo antes de esa fecha.
+            </>
+          ) : (
+            <>
+              Su plan <strong>{planLabel(activa.plan)}</strong> venció el{" "}
+              {fmtDate(activa.planPagadoHasta)}. Ahora está en el plan Ranchero: renuévelo abajo.
+            </>
+          )}
+        </div>
+      )}
 
       {/* Estado actual */}
       <section
@@ -134,9 +180,19 @@ export default function PlanPage() {
       />
 
       <p className="text-[0.7rem] text-subtle text-center">
-        Los pagos automáticos llegarán próximamente. Por ahora los cambios se procesan
-        manualmente: transfieres, subes el comprobante y activamos tu plan.
+        Pago en línea seguro con Bold (tarjeta, PSE, Nequi o Bancolombia): el plan se activa
+        apenas se aprueba. También puede transferir y subir el comprobante.
       </p>
+
+      {regresoBold && (
+        <RegresoBoldModal
+          estado={regresoBold.estado}
+          error={regresoBold.error}
+          hasta={activa.planPagadoHasta}
+          plan={activa.plan}
+          onClose={() => setRegresoBold(null)}
+        />
+      )}
 
       {pagando && (
         <PagoManualModal
@@ -165,6 +221,29 @@ function PagoManualModal({
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [enviado, setEnviado] = useState(false);
+  // Pago en línea: al tocar "Pagar en línea" se pide la firma al servidor y
+  // se pinta el botón de Bold en `botonRef`. La transferencia queda abajo.
+  const [boldEstado, setBoldEstado] = useState<"inicio" | "cargando" | "listo" | "error">("inicio");
+  const [boldError, setBoldError] = useState<string | null>(null);
+  const [verManual, setVerManual] = useState(false);
+  const botonRef = useRef<HTMLDivElement>(null);
+
+  async function prepararBold() {
+    if (destino !== "ganadero" && destino !== "hacienda") return;
+    setBoldEstado("cargando");
+    setBoldError(null);
+    try {
+      const datos = await crearPagoBold(fincaId, destino, periodo);
+      setBoldEstado("listo");
+      // El contenedor ya está en pantalla; se pinta en el siguiente cuadro.
+      requestAnimationFrame(() => {
+        if (botonRef.current) pintarBotonBold(botonRef.current, datos);
+      });
+    } catch (e) {
+      setBoldError((e as Error).message);
+      setBoldEstado("error");
+    }
+  }
 
   async function handleEnviar() {
     setError(null);
@@ -215,14 +294,10 @@ function PagoManualModal({
       open
       onClose={onClose}
       title={`Cambiar a ${planLabel(destino)}`}
-      eyebrow="Pago manual"
+      eyebrow="Pago"
       size="md"
     >
       <div className="space-y-4">
-        <p className="text-sm text-muted">
-          Transfiere el valor del plan y sube tu comprobante. Te confirmamos y activamos tu
-          plan en cuanto revisemos el pago.
-        </p>
         <p className="text-sm rounded-xl px-3 py-2" style={{ background: "rgba(184, 206, 122, 0.22)" }}>
           🎓 De regalo: al confirmar tu pago te enviamos el <strong>{CURSO_REGALO}</strong>.
         </p>
@@ -236,7 +311,7 @@ function PagoManualModal({
               className="text-[0.62rem] font-mono uppercase tracking-[0.14em]"
               style={{ color: "var(--lime-bright)" }}
             >
-              {periodo === "anual" ? "Valor a transferir por el año" : "Valor a transferir por mes"}
+              {periodo === "anual" ? "Valor del plan por el año" : "Valor del plan por mes"}
             </div>
             <div className="text-2xl font-bold mt-0.5">{cop(precioPeriodo(destino, periodo))} COP</div>
             {periodo === "anual" && (
@@ -247,6 +322,44 @@ function PagoManualModal({
           </div>
         )}
 
+        <div className="rounded-2xl border border-primary p-4 space-y-3">
+          <div>
+            <div className="font-semibold">Pagar en línea</div>
+            <p className="text-sm text-muted mt-0.5">
+              Con tarjeta, PSE, Nequi o Bancolombia. Su plan queda activo apenas se apruebe el pago.
+            </p>
+          </div>
+          {boldEstado !== "listo" && (
+            <button
+              type="button"
+              className="btn btn-primary w-full justify-center"
+              onClick={() => void prepararBold()}
+              disabled={boldEstado === "cargando"}
+            >
+              {boldEstado === "cargando" ? "Preparando el pago…" : `Pagar ${cop(precioPeriodo(destino, periodo))} en línea`}
+            </button>
+          )}
+          <div ref={botonRef} className={boldEstado === "listo" ? "flex justify-center min-h-12" : "hidden"} />
+          {boldEstado === "listo" && (
+            <p className="text-xs text-muted text-center">Toque el botón de Bold para abrir el pago seguro.</p>
+          )}
+          {boldError && <div className="text-sm text-danger bg-danger/10 px-3 py-2 rounded-lg">{boldError}</div>}
+        </div>
+
+        <button
+          type="button"
+          className="text-sm text-muted underline underline-offset-4 w-full text-center"
+          onClick={() => setVerManual((v) => !v)}
+        >
+          {verManual ? "Ocultar la transferencia" : "Prefiero transferir y subir el comprobante"}
+        </button>
+
+        {verManual && (
+        <>
+        <p className="text-sm text-muted">
+          Transfiere el valor del plan y sube tu comprobante. Te confirmamos y activamos tu
+          plan en cuanto revisemos el pago.
+        </p>
         <div className="card bg-surface-2 space-y-2 text-sm">
           <div className="eyebrow">Cuenta bancaria</div>
           <div><strong>Banco:</strong> {CUENTA_PAGO.banco}</div>
@@ -281,6 +394,65 @@ function PagoManualModal({
         >
           {enviando ? "Enviando…" : "Enviar solicitud"}
         </button>
+        </>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+function RegresoBoldModal({
+  estado,
+  error,
+  hasta,
+  plan,
+  onClose,
+}: {
+  estado: EstadoPagoBold | "verificando" | "error";
+  error?: string;
+  hasta: string | null;
+  plan: PlanFinca;
+  onClose: () => void;
+}) {
+  const textos: Record<typeof estado, { titulo: string; cuerpo: React.ReactNode }> = {
+    verificando: { titulo: "Revisando su pago…", cuerpo: "Un momento: estamos confirmando el pago con Bold." },
+    aprobado: {
+      titulo: "¡Pago aprobado!",
+      cuerpo: (
+        <>
+          Su plan <strong>{planLabel(plan)}</strong> ya está activo
+          {hasta ? <> hasta el <strong>{fmtDate(hasta)}</strong></> : null}. Le enviaremos a su correo
+          el <strong>{CURSO_REGALO}</strong> de regalo.
+        </>
+      ),
+    },
+    pendiente: {
+      titulo: "Su pago está en proceso",
+      cuerpo: "Bold todavía no lo confirma (con PSE puede tardar unos minutos). Apenas se apruebe, su plan se activa solo.",
+    },
+    rechazado: {
+      titulo: "El pago no se aprobó",
+      cuerpo: "No se hizo ningún cobro. Puede intentarlo de nuevo con otro medio de pago o transferir y subir el comprobante.",
+    },
+    revisar: {
+      titulo: "Estamos revisando su pago",
+      cuerpo: "Recibimos el pago pero hay que revisarlo a mano. Le escribimos pronto; si tiene dudas, escríbanos a soporte@rumea.app.",
+    },
+    error: {
+      titulo: "No pudimos revisar el pago",
+      cuerpo: `${error ?? "Error desconocido"}. Si Bold le cobró, su plan se activará solo en unos minutos; si no, escríbanos a soporte@rumea.app.`,
+    },
+  };
+  const t = textos[estado];
+  return (
+    <Modal open onClose={onClose} title={t.titulo} eyebrow="Pago en línea">
+      <div className="space-y-4">
+        <p className="text-sm">{t.cuerpo}</p>
+        {estado !== "verificando" && (
+          <button className="btn btn-primary w-full justify-center" onClick={onClose}>
+            Entendido
+          </button>
+        )}
       </div>
     </Modal>
   );

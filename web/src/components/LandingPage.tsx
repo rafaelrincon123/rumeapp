@@ -1328,7 +1328,7 @@ function Pricing({ onSignup }: { onSignup: () => void }) {
         <PricingCards onSelect={() => onSignup()} />
 
         <p className="text-center text-[0.7rem] font-mono uppercase tracking-widest mt-10" style={{ color: "var(--forest-3)", opacity: 0.65 }}>
-          Precios en pesos colombianos. Pago por transferencia, Nequi o Daviplata.
+          Precios en pesos colombianos. Pago en línea con tarjeta, PSE o Nequi, o por transferencia.
         </p>
       </div>
     </section>
