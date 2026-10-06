@@ -16,6 +16,9 @@
 // (va en el botón); si no está como secreto se usa la de abajo.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { avisarPagoAprobado } from "../_shared/pago-aprobado.ts";
+
+declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -119,6 +122,8 @@ Deno.serve(async (req: Request) => {
     const { data: pago } = await admin.from("pagos_bold").select("*").eq("order_id", orderId).maybeSingle();
     if (!pago || pago.user_id !== userId) return json({ error: "Pago no encontrado" }, 404);
     if (pago.estado === "aprobado" || pago.estado === "revisar") {
+      // Por si el correo del regalo no salió antes (no se duplica).
+      if (pago.estado === "aprobado") EdgeRuntime.waitUntil(avisarPagoAprobado(admin, orderId));
       return json({ estado: pago.estado, plan: pago.plan, periodo: pago.periodo });
     }
 
@@ -137,6 +142,7 @@ Deno.serve(async (req: Request) => {
         p_metodo: tx.payment_method ?? null,
       });
       if (actErr) return json({ error: actErr.message }, 500);
+      EdgeRuntime.waitUntil(avisarPagoAprobado(admin, orderId));
       return json({ estado: (act as { estado: string }).estado, plan: pago.plan, periodo: pago.periodo });
     }
     if (st === "REJECTED" || st === "FAILED" || st === "VOIDED") {

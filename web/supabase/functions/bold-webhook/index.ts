@@ -14,6 +14,9 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { encodeBase64 } from "jsr:@std/encoding@1/base64";
+import { avisarPagoAprobado } from "../_shared/pago-aprobado.ts";
+
+declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -83,6 +86,9 @@ Deno.serve(async (req: Request) => {
     });
     // 500 hace que Bold reintente más tarde (15 min, 1 h, 4 h…).
     if (error) return new Response(error.message, { status: 500 });
+    // Correos (guía al cliente, aviso a Rafael) en segundo plano: Bold
+    // necesita la respuesta en menos de 2 segundos.
+    EdgeRuntime.waitUntil(avisarPagoAprobado(admin, orderId));
   } else if (ev.type === "SALE_REJECTED") {
     await admin.from("pagos_bold")
       .update({ estado: "rechazado", bold_payment_id: ev.data?.payment_id ?? null })

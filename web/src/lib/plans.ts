@@ -47,8 +47,12 @@ export type Periodo = "mensual" | "anual";
 /** Descuento del plan anual sobre 12 meses de plan mensual. */
 export const DESCUENTO_ANUAL = 0.2;
 
-/** Regalo de los planes pagos: se envía al correo al confirmar el primer pago. */
-export const CURSO_REGALO = "Curso intensivo de ganadería digital";
+/**
+ * Regalo de los planes pagos: la guía propia "Ganadería rentable" (PDF de 55
+ * páginas, fuente en marketing/curso/). La envía sola la Edge Function de
+ * Bold al aprobarse el pago; en pagos manuales la manda Rafael.
+ */
+export const CURSO_REGALO = "Guía práctica «Ganadería rentable»";
 
 /** Lo que se paga por período (mensual o anual, este con el descuento). */
 export function precioPeriodo(plan: PlanFinca, periodo: Periodo): number {

@@ -325,7 +325,7 @@ function Card({
               </div>
               <div className="text-sm font-bold leading-snug">{CURSO_REGALO}</div>
               <div className="text-[0.7rem] mt-0.5" style={{ color: soft }}>
-                Se lo enviamos al correo cuando confirmamos su pago.
+                55 páginas en PDF. Se la enviamos al correo apenas se aprueba su pago.
               </div>
             </div>
           </div>

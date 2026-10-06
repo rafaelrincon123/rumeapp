@@ -66,16 +66,17 @@ export default function TerminosPage() {
               <p>
                 RumeApp ofrece tres planes: <strong>Ranchero</strong> (gratis para siempre, con límites de
                 animales y personas), <strong>Ganadero</strong> y <strong>Hacienda</strong> (planes pagos).
-                Los planes pagos incluyen como obsequio el Curso intensivo de ganadería digital, que se
+                Los planes pagos incluyen como obsequio la guía práctica «Ganadería rentable» (PDF), que se
                 envía al correo registrado una vez confirmado el primer pago. Los precios se muestran en pesos
                 colombianos y se pueden pagar mes a mes o por un año completo con descuento.
               </p>
               <p className="mt-3">
-                Mientras no exista una pasarela de pago automática integrada, el cambio a un plan pago se
-                procesa de forma manual: transfieres el valor del plan a la cuenta indicada en la app, subes
-                el comprobante de pago, y el equipo de RumeApp activa tu plan una vez confirmado el pago.
-                Este proceso puede tardar hasta 24-48 horas hábiles; mientras tanto tu finca sigue
-                funcionando con el plan Ranchero.
+                Los planes pagos se pueden pagar en línea a través de la pasarela Bold (tarjeta, PSE, Nequi
+                o Botón Bancolombia); el plan se activa en cuanto Bold aprueba el pago y dura el período
+                pagado (un mes o un año). También se puede transferir el valor a la cuenta indicada en la
+                app y subir el comprobante; en ese caso el equipo de RumeApp activa el plan una vez
+                confirmado el pago, lo que puede tardar hasta 24-48 horas hábiles. Mientras tanto la finca
+                sigue funcionando con el plan Ranchero.
               </p>
               <p className="mt-3">
                 No se realizan cobros automáticos ni recurrentes sin tu autorización explícita. RumeApp no

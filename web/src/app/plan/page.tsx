@@ -270,7 +270,7 @@ function PagoManualModal({
             revisemos el pago, y tu plan queda activo.
           </p>
           <p className="text-sm">
-            🎓 Con la activación le enviamos a su correo el <strong>{CURSO_REGALO}</strong> de regalo.
+            🎓 Con la activación le enviamos a su correo la <strong>{CURSO_REGALO}</strong> de regalo.
           </p>
           {!file && (
             <p className="text-xs text-muted">
@@ -299,7 +299,7 @@ function PagoManualModal({
     >
       <div className="space-y-4">
         <p className="text-sm rounded-xl px-3 py-2" style={{ background: "rgba(184, 206, 122, 0.22)" }}>
-          🎓 De regalo: al confirmar tu pago te enviamos el <strong>{CURSO_REGALO}</strong>.
+          🎓 De regalo: al confirmar su pago le enviamos la <strong>{CURSO_REGALO}</strong> (55 páginas en PDF).
         </p>
 
         {PLAN_LIMITS[destino].precioCOP > 0 && (
@@ -422,7 +422,7 @@ function RegresoBoldModal({
         <>
           Su plan <strong>{planLabel(plan)}</strong> ya está activo
           {hasta ? <> hasta el <strong>{fmtDate(hasta)}</strong></> : null}. Le enviaremos a su correo
-          el <strong>{CURSO_REGALO}</strong> de regalo.
+          la <strong>{CURSO_REGALO}</strong> de regalo.
         </>
       ),
     },
