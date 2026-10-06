@@ -16,7 +16,9 @@ import {
   precioPeriodo,
   CURSO_REGALO,
   puedeProbar,
+  MESES_DESCUENTO_INICIAL,
 } from "@/lib/plans";
+import { getSupabase } from "@/lib/supabase";
 import OfertaPrueba from "@/components/OfertaPrueba";
 import { CUENTA_PAGO, registrarSolicitudPlan } from "@/lib/comprobantePago";
 import type { PlanFinca } from "@/lib/types";
@@ -61,6 +63,20 @@ export default function PlanPage() {
     };
     verificar();
   }, []);
+
+  // Descuento de bienvenida: 20 % en los primeros pagos mensuales. Se cuentan
+  // los pagos mensuales aprobados por Bold (bold-pago aplica la misma regla).
+  const [mesesDescuento, setMesesDescuento] = useState(MESES_DESCUENTO_INICIAL);
+  useEffect(() => {
+    if (!activa) return;
+    void getSupabase()
+      .from("pagos_bold")
+      .select("order_id", { count: "exact", head: true })
+      .eq("finca_id", activa.id)
+      .eq("estado", "aprobado")
+      .eq("periodo", "mensual")
+      .then(({ count }) => setMesesDescuento(Math.max(0, MESES_DESCUENTO_INICIAL - (count ?? 0))));
+  }, [activa]);
 
   const usage = useMemo(() => {
     if (!db) return null;
@@ -168,6 +184,7 @@ export default function PlanPage() {
 
       <PricingCards
         planActual={planActual}
+        descuentoInicial={mesesDescuento > 0}
         onSelect={(p, periodo) => {
           if (PLAN_LIMITS[p].precioCOP > 0) return setPagando({ plan: p, periodo });
           // Bajar al plan gratis no requiere pago: se pide por correo.
@@ -198,6 +215,7 @@ export default function PlanPage() {
         <PagoManualModal
           destino={pagando.plan}
           periodo={pagando.periodo}
+          mesesDescuento={mesesDescuento}
           fincaId={activa.id}
           onClose={() => setPagando(null)}
         />
@@ -209,11 +227,14 @@ export default function PlanPage() {
 function PagoManualModal({
   destino,
   periodo,
+  mesesDescuento,
   fincaId,
   onClose,
 }: {
   destino: PlanFinca;
   periodo: Periodo;
+  /** Pagos mensuales que le quedan con el 20 % de bienvenida. */
+  mesesDescuento: number;
   fincaId: string;
   onClose: () => void;
 }) {
@@ -227,6 +248,8 @@ function PagoManualModal({
   const [boldError, setBoldError] = useState<string | null>(null);
   const [verManual, setVerManual] = useState(false);
   const botonRef = useRef<HTMLDivElement>(null);
+  const conDescuento = periodo === "mensual" && mesesDescuento > 0;
+  const valor = precioPeriodo(destino, periodo, conDescuento);
 
   async function prepararBold() {
     if (destino !== "ganadero" && destino !== "hacienda") return;
@@ -313,7 +336,12 @@ function PagoManualModal({
             >
               {periodo === "anual" ? "Valor del plan por el año" : "Valor del plan por mes"}
             </div>
-            <div className="text-2xl font-bold mt-0.5">{cop(precioPeriodo(destino, periodo))} COP</div>
+            <div className="text-2xl font-bold mt-0.5">{cop(valor)} COP</div>
+            {conDescuento && (
+              <div className="text-xs opacity-75">
+                Con el 20 % de bienvenida ({mesesDescuento === 1 ? "su último mes" : `le quedan ${mesesDescuento} meses`} con descuento). Luego {cop(PLAN_LIMITS[destino].precioCOP)} al mes.
+              </div>
+            )}
             {periodo === "anual" && (
               <div className="text-xs opacity-75">
                 En vez de {cop(PLAN_LIMITS[destino].precioCOP * 12)} pagando mes a mes.
@@ -336,7 +364,7 @@ function PagoManualModal({
               onClick={() => void prepararBold()}
               disabled={boldEstado === "cargando"}
             >
-              {boldEstado === "cargando" ? "Preparando el pago…" : `Pagar ${cop(precioPeriodo(destino, periodo))} en línea`}
+              {boldEstado === "cargando" ? "Preparando el pago…" : `Pagar ${cop(valor)} en línea`}
             </button>
           )}
           <div ref={botonRef} className={boldEstado === "listo" ? "flex justify-center min-h-12" : "hidden"} />

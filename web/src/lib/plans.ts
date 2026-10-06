@@ -54,10 +54,22 @@ export const DESCUENTO_ANUAL = 0.2;
  */
 export const CURSO_REGALO = "Guía práctica «Ganadería rentable»";
 
-/** Lo que se paga por período (mensual o anual, este con el descuento). */
-export function precioPeriodo(plan: PlanFinca, periodo: Periodo): number {
+/**
+ * Descuento de bienvenida: 20 % en los primeros 3 pagos mensuales de cada
+ * finca (no aplica al plan anual, que ya trae su propio 20 %). Espejo en la
+ * Edge Function bold-pago, que es la que de verdad cobra.
+ */
+export const DESCUENTO_INICIAL = 0.2;
+export const MESES_DESCUENTO_INICIAL = 3;
+
+/**
+ * Lo que se paga por período (mensual o anual, este con su descuento).
+ * `descuentoInicial` aplica el 20 % de los primeros meses (solo mensual).
+ */
+export function precioPeriodo(plan: PlanFinca, periodo: Periodo, descuentoInicial = false): number {
   const mes = PLAN_LIMITS[plan].precioCOP;
-  return periodo === "anual" ? Math.round(mes * 12 * (1 - DESCUENTO_ANUAL)) : mes;
+  if (periodo === "anual") return Math.round(mes * 12 * (1 - DESCUENTO_ANUAL));
+  return descuentoInicial ? Math.round(mes * (1 - DESCUENTO_INICIAL)) : mes;
 }
 
 /** Equivalente mensual del plan anual. */

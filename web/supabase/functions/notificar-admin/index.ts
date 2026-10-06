@@ -30,12 +30,17 @@ const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
 // Espejo de PLAN_LIMITS.precioCOP y DESCUENTO_ANUAL en web/src/lib/plans.ts.
 const PRECIO_MES_COP: Record<string, number> = { ganadero: 25_000, hacienda: 55_000 };
 const DESCUENTO_ANUAL = 0.2;
+const DESCUENTO_INICIAL = 0.2;
 
 function valorEsperado(plan: string, periodo: string): string {
   const mes = PRECIO_MES_COP[plan];
   if (!mes) return "—";
-  const valor = periodo === "anual" ? Math.round(mes * 12 * (1 - DESCUENTO_ANUAL)) : mes;
-  return `$${valor.toLocaleString("es-CO")} COP ${periodo === "anual" ? "por el año" : "por el mes"}`;
+  if (periodo === "anual") {
+    return `$${Math.round(mes * 12 * (1 - DESCUENTO_ANUAL)).toLocaleString("es-CO")} COP por el año`;
+  }
+  // Descuento de bienvenida (plans.ts): 20 % en los primeros 3 pagos mensuales.
+  const conDescuento = Math.round(mes * (1 - DESCUENTO_INICIAL));
+  return `$${mes.toLocaleString("es-CO")} COP por el mes ($${conDescuento.toLocaleString("es-CO")} si es de sus primeros 3 meses, con el 20 % de bienvenida)`;
 }
 
 const PLAN_NOMBRE: Record<string, string> = {

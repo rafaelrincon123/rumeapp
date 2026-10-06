@@ -29,11 +29,16 @@ const BOLD_IDENTITY_KEY = Deno.env.get("BOLD_IDENTITY_KEY") ?? "ZhmkoTffRHvCm8HB
 // se calcula AQUÍ, nunca se recibe del navegador.
 const PRECIO_MES: Record<string, number> = { ganadero: 25_000, hacienda: 55_000 };
 const DESCUENTO_ANUAL = 0.2;
+// Descuento de bienvenida: 20 % en los primeros 3 pagos MENSUALES aprobados
+// de cada finca (espejo de DESCUENTO_INICIAL / MESES_DESCUENTO_INICIAL).
+const DESCUENTO_INICIAL = 0.2;
+const MESES_DESCUENTO_INICIAL = 3;
 const NOMBRE_PLAN: Record<string, string> = { ganadero: "Ganadero", hacienda: "Hacienda" };
 
-function monto(plan: string, periodo: string): number {
+function monto(plan: string, periodo: string, descuentoInicial: boolean): number {
   const mes = PRECIO_MES[plan];
-  return periodo === "anual" ? Math.round(mes * 12 * (1 - DESCUENTO_ANUAL)) : mes;
+  if (periodo === "anual") return Math.round(mes * 12 * (1 - DESCUENTO_ANUAL));
+  return descuentoInicial ? Math.round(mes * (1 - DESCUENTO_INICIAL)) : mes;
 }
 
 const CORS_HEADERS = {
@@ -91,7 +96,17 @@ Deno.serve(async (req: Request) => {
       return json({ error: "Solo el dueño de la finca puede pagar el plan" }, 403);
     }
 
-    const total = monto(plan, periodo);
+    let descuentoInicial = false;
+    if (periodo === "mensual") {
+      const { count } = await admin
+        .from("pagos_bold")
+        .select("order_id", { count: "exact", head: true })
+        .eq("finca_id", finca_id)
+        .eq("estado", "aprobado")
+        .eq("periodo", "mensual");
+      descuentoInicial = (count ?? 0) < MESES_DESCUENTO_INICIAL;
+    }
+    const total = monto(plan, periodo, descuentoInicial);
     // order-id de Bold: alfanumérico, _ y -, máximo 60 caracteres.
     const orderId = `RUME-${crypto.randomUUID().replace(/-/g, "").slice(0, 20)}`;
     const { error: insErr } = await admin.from("pagos_bold").insert({
@@ -111,7 +126,7 @@ Deno.serve(async (req: Request) => {
       amount: total,
       currency: "COP",
       integritySignature: firma,
-      description: `RumeApp plan ${NOMBRE_PLAN[plan]} ${periodo === "anual" ? "anual" : "mensual"}`.slice(0, 100),
+      description: `RumeApp plan ${NOMBRE_PLAN[plan]} ${periodo === "anual" ? "anual" : "mensual"}${descuentoInicial ? " (20% de bienvenida)" : ""}`.slice(0, 100),
       email: u.user.email ?? null,
     });
   }

@@ -5,6 +5,8 @@ import { useState } from "react";
 import {
   PLAN_LIMITS,
   DESCUENTO_ANUAL,
+  DESCUENTO_INICIAL,
+  MESES_DESCUENTO_INICIAL,
   type Periodo,
   cop,
   precioPeriodo,
@@ -72,6 +74,7 @@ function lim(n: number | null): string {
 }
 
 const PCT_ANUAL = Math.round(DESCUENTO_ANUAL * 100);
+const PCT_INICIAL = Math.round(DESCUENTO_INICIAL * 100);
 
 /** Selector Mensual / Anual. */
 function SelectorPeriodo({ periodo, onChange }: { periodo: Periodo; onChange: (p: Periodo) => void }) {
@@ -116,9 +119,15 @@ export default function PricingCards({
   planActual,
   onSelect,
   ctaLabel,
+  descuentoInicial = true,
 }: {
   /** Plan vigente de la finca (en /plan). En la landing, omitir. */
   planActual?: PlanFinca;
+  /**
+   * ¿Mostrar el 20 % de los primeros meses en el pago mensual? En la landing
+   * siempre (clientes nuevos); en /plan solo si a la finca le quedan meses.
+   */
+  descuentoInicial?: boolean;
   onSelect: (plan: PlanFinca, periodo: Periodo) => void;
   /** Texto del botón; por defecto depende del contexto. */
   ctaLabel?: (plan: PlanFinca) => string;
@@ -136,6 +145,7 @@ export default function PricingCards({
             planActual={planActual}
             onSelect={onSelect}
             ctaLabel={ctaLabel}
+            descuentoInicial={descuentoInicial}
           />
         ))}
       </div>
@@ -149,9 +159,11 @@ function Card({
   planActual,
   onSelect,
   ctaLabel,
+  descuentoInicial,
 }: {
   plan: PlanFinca;
   periodo: Periodo;
+  descuentoInicial: boolean;
   planActual?: PlanFinca;
   onSelect: (plan: PlanFinca, periodo: Periodo) => void;
   ctaLabel?: (plan: PlanFinca) => string;
@@ -266,6 +278,31 @@ function Card({
               </div>
               <div className="text-xs mt-1.5" style={{ color: soft }}>
                 Un solo pago de {cop(precioPeriodo(plan, "anual"))} al año
+              </div>
+            </>
+          ) : descuentoInicial ? (
+            <>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm line-through" style={{ color: soft }}>
+                  {cop(limits.precioCOP)}
+                </span>
+                <span
+                  className="text-[0.62rem] font-mono font-semibold uppercase tracking-[0.12em] px-2 py-0.5 rounded-full"
+                  style={
+                    dark
+                      ? { background: "var(--lime)", color: "var(--forest)" }
+                      : { background: "var(--forest)", color: "var(--lime-bright)" }
+                  }
+                >
+                  −{PCT_INICIAL}% · {MESES_DESCUENTO_INICIAL} primeros meses
+                </span>
+              </div>
+              <div className="flex items-baseline gap-1.5 mt-1">
+                <span className="text-5xl font-bold tracking-tight">{cop(precioPeriodo(plan, "mensual", true))}</span>
+                <span className="text-sm" style={{ color: soft }}>/mes</span>
+              </div>
+              <div className="text-xs mt-1.5" style={{ color: soft }}>
+                Luego {cop(limits.precioCOP)}/mes. Pagando el año, {cop(precioMesAnual(plan))}/mes los 12 meses
               </div>
             </>
           ) : (
