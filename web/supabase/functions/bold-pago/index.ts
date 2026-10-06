@@ -28,7 +28,7 @@ const BOLD_IDENTITY_KEY = Deno.env.get("BOLD_IDENTITY_KEY") ?? "ZhmkoTffRHvCm8HB
 // Espejo de PLAN_LIMITS / DESCUENTO_ANUAL en web/src/lib/plans.ts. El monto
 // se calcula AQUÍ, nunca se recibe del navegador.
 const PRECIO_MES: Record<string, number> = { ganadero: 25_000, hacienda: 55_000 };
-const DESCUENTO_ANUAL = 0.2;
+const DESCUENTO_ANUAL = 0.25;
 // Descuento de bienvenida: 20 % en los primeros 3 pagos MENSUALES aprobados
 // de cada finca (espejo de DESCUENTO_INICIAL / MESES_DESCUENTO_INICIAL).
 const DESCUENTO_INICIAL = 0.2;

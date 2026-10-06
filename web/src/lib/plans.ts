@@ -45,7 +45,7 @@ export function nextPlan(plan: PlanFinca): PlanFinca | null {
 export type Periodo = "mensual" | "anual";
 
 /** Descuento del plan anual sobre 12 meses de plan mensual. */
-export const DESCUENTO_ANUAL = 0.2;
+export const DESCUENTO_ANUAL = 0.25;
 
 /**
  * Regalo de los planes pagos: la guía propia "Ganadería rentable" (PDF de 55
@@ -56,7 +56,7 @@ export const CURSO_REGALO = "Guía práctica «Ganadería rentable»";
 
 /**
  * Descuento de bienvenida: 20 % en los primeros 3 pagos mensuales de cada
- * finca (no aplica al plan anual, que ya trae su propio 20 %). Espejo en la
+ * finca (no aplica al plan anual, que ya trae su propio 25 %). Espejo en la
  * Edge Function bold-pago, que es la que de verdad cobra.
  */
 export const DESCUENTO_INICIAL = 0.2;

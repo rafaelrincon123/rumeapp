@@ -29,7 +29,7 @@ const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
 
 // Espejo de PLAN_LIMITS.precioCOP y DESCUENTO_ANUAL en web/src/lib/plans.ts.
 const PRECIO_MES_COP: Record<string, number> = { ganadero: 25_000, hacienda: 55_000 };
-const DESCUENTO_ANUAL = 0.2;
+const DESCUENTO_ANUAL = 0.25;
 const DESCUENTO_INICIAL = 0.2;
 
 function valorEsperado(plan: string, periodo: string): string {
