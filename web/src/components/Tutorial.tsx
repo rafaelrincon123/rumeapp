@@ -242,7 +242,7 @@ export function PrimerosPasos() {
       titulo: "Registre su primer animal",
       como: "Basta con la chapeta o un nombre, qué animal es (vaca, novilla, toro…) y su edad aproximada. Toma menos de un minuto.",
       boton: "Registrar animal",
-      alterno: { texto: "¿Tiene muchos? Regístrelos varios a la vez", href: hrefNuevo("/animales", { modo: "varios" }) },
+      alterno: { texto: "¿Los tiene en un cuaderno o en Excel? Cárguelos con una foto", href: hrefNuevo("/animales", { modo: "varios" }) },
     },
     {
       id: "gasto",

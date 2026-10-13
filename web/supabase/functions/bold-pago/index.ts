@@ -5,7 +5,9 @@
 // llega al navegador.
 //
 // Body (JSON), con el token del usuario en Authorization:
-//   { accion: "crear", finca_id, plan: "ganadero"|"hacienda", periodo: "mensual"|"anual" }
+//   { accion: "crear", finca_id, plan: "ganadero"|"hacienda", periodo: "mensual"|"anual"|"fundador" }
+//     ("fundador" = plan Ganadero por $150.000 el año, precio para siempre:
+//      solo mientras queden cupos o si la finca ya es fundadora y renueva)
 //     → registra el intento en pagos_bold y devuelve los datos del botón,
 //       con la firma de integridad SHA256(orderId + monto + "COP" + secreta).
 //   { accion: "verificar", order_id }
@@ -34,8 +36,11 @@ const DESCUENTO_ANUAL = 0.25;
 const DESCUENTO_INICIAL = 0.2;
 const MESES_DESCUENTO_INICIAL = 3;
 const NOMBRE_PLAN: Record<string, string> = { ganadero: "Ganadero", hacienda: "Hacienda" };
+// Plan Fundador (espejo de PRECIO_FUNDADOR en plans.ts): solo Ganadero.
+const PRECIO_FUNDADOR = 150_000;
 
 function monto(plan: string, periodo: string, descuentoInicial: boolean): number {
+  if (periodo === "fundador") return PRECIO_FUNDADOR;
   const mes = PRECIO_MES[plan];
   if (periodo === "anual") return Math.round(mes * 12 * (1 - DESCUENTO_ANUAL));
   return descuentoInicial ? Math.round(mes * (1 - DESCUENTO_INICIAL)) : mes;
@@ -82,18 +87,27 @@ Deno.serve(async (req: Request) => {
   // ---------------------------------------------------------------- crear
   if (body.accion === "crear") {
     const { finca_id, plan, periodo } = body;
-    if (!finca_id || !plan || !PRECIO_MES[plan] || (periodo !== "mensual" && periodo !== "anual")) {
+    if (!finca_id || !plan || !PRECIO_MES[plan] || !["mensual", "anual", "fundador"].includes(periodo ?? "")) {
       return json({ error: "Datos del pago incompletos" }, 400);
+    }
+    if (periodo === "fundador" && plan !== "ganadero") {
+      return json({ error: "El plan Fundador es del plan Ganadero" }, 400);
     }
     if (!BOLD_SECRET_KEY) return json({ error: "Los pagos en línea aún no están configurados" }, 503);
 
     const { data: finca } = await admin
       .from("fincas")
-      .select("id, nombre, owner_user_id")
+      .select("id, nombre, owner_user_id, fundador")
       .eq("id", finca_id)
       .maybeSingle();
     if (!finca || finca.owner_user_id !== userId) {
       return json({ error: "Solo el dueño de la finca puede pagar el plan" }, 403);
+    }
+    if (periodo === "fundador" && !finca.fundador) {
+      const { data: cupos } = await admin.rpc("cupos_fundador");
+      if (!cupos || (cupos as number) <= 0) {
+        return json({ error: "Ya se acabaron los cupos del plan Fundador" }, 409);
+      }
     }
 
     let descuentoInicial = false;
@@ -126,7 +140,9 @@ Deno.serve(async (req: Request) => {
       amount: total,
       currency: "COP",
       integritySignature: firma,
-      description: `RumeApp plan ${NOMBRE_PLAN[plan]} ${periodo === "anual" ? "anual" : "mensual"}${descuentoInicial ? " (20% de bienvenida)" : ""}`.slice(0, 100),
+      description: (periodo === "fundador"
+        ? "RumeApp plan Ganadero Fundador (1 año)"
+        : `RumeApp plan ${NOMBRE_PLAN[plan]} ${periodo === "anual" ? "anual" : "mensual"}${descuentoInicial ? " (20% de bienvenida)" : ""}`).slice(0, 100),
       email: u.user.email ?? null,
     });
   }

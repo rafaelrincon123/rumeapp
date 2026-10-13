@@ -42,7 +42,16 @@ export function nextPlan(plan: PlanFinca): PlanFinca | null {
   return null;
 }
 
-export type Periodo = "mensual" | "anual";
+export type Periodo = "mensual" | "anual" | "fundador";
+
+/**
+ * Plan Fundador: plan Ganadero por $150.000 el año con ese precio para siempre,
+ * solo para las primeras 50 fincas que paguen (cupos_fundador() en la base;
+ * bold-pago cobra y valida). Garantía: devolución del 100 % en 30 días.
+ */
+export const PRECIO_FUNDADOR = 150_000;
+export const CUPOS_FUNDADOR = 50;
+export const DIAS_GARANTIA = 30;
 
 /** Descuento del plan anual sobre 12 meses de plan mensual. */
 export const DESCUENTO_ANUAL = 0.25;
@@ -67,6 +76,7 @@ export const MESES_DESCUENTO_INICIAL = 3;
  * `descuentoInicial` aplica el 20 % de los primeros meses (solo mensual).
  */
 export function precioPeriodo(plan: PlanFinca, periodo: Periodo, descuentoInicial = false): number {
+  if (periodo === "fundador") return PRECIO_FUNDADOR;
   const mes = PLAN_LIMITS[plan].precioCOP;
   if (periodo === "anual") return Math.round(mes * 12 * (1 - DESCUENTO_ANUAL));
   return descuentoInicial ? Math.round(mes * (1 - DESCUENTO_INICIAL)) : mes;

@@ -17,6 +17,7 @@ import {
   CURSO_REGALO,
   puedeProbar,
   MESES_DESCUENTO_INICIAL,
+  DIAS_GARANTIA,
 } from "@/lib/plans";
 import { getSupabase } from "@/lib/supabase";
 import OfertaPrueba from "@/components/OfertaPrueba";
@@ -24,6 +25,7 @@ import { CUENTA_PAGO, registrarSolicitudPlan } from "@/lib/comprobantePago";
 import type { PlanFinca } from "@/lib/types";
 import Modal from "@/components/Modal";
 import PricingCards from "@/components/PricingCards";
+import OfertaFundador from "@/components/OfertaFundador";
 
 export default function PlanPage() {
   const { db, ready } = useDB();
@@ -35,6 +37,9 @@ export default function PlanPage() {
     const p = new URLSearchParams(window.location.search).get("activar");
     if (p === "ganadero" || p === "hacienda") {
       setPagando({ plan: p, periodo: "mensual" });
+      window.history.replaceState(null, "", "/plan");
+    } else if (p === "fundador") {
+      setPagando({ plan: "ganadero", periodo: "fundador" });
       window.history.replaceState(null, "", "/plan");
     }
   }, []);
@@ -182,6 +187,14 @@ export default function PlanPage() {
         </div>
       </section>
 
+      {!(activa.planPagado && activa.plan === "hacienda") && (
+        <OfertaFundador
+          esFundador={activa.fundador}
+          textoBoton={activa.fundador ? "Renovar por 1 año" : "Quiero ser Fundador"}
+          onElegir={() => setPagando({ plan: "ganadero", periodo: "fundador" })}
+        />
+      )}
+
       <PricingCards
         planActual={planActual}
         descuentoInicial={mesesDescuento > 0}
@@ -288,7 +301,7 @@ function PagoManualModal({
         <div className="space-y-4">
           <p className="text-sm">
             Recibimos tu solicitud para el plan <strong>{planLabel(destino)}</strong>{" "}
-            ({periodo === "anual" ? "pago anual" : "pago mensual"})
+            ({periodo === "fundador" ? "plan Fundador, 1 año" : periodo === "anual" ? "pago anual" : "pago mensual"})
             {file ? " con tu comprobante" : ""}. Te confirmamos por correo o WhatsApp en cuanto
             revisemos el pago, y tu plan queda activo.
           </p>
@@ -316,7 +329,7 @@ function PagoManualModal({
     <Modal
       open
       onClose={onClose}
-      title={`Cambiar a ${planLabel(destino)}`}
+      title={periodo === "fundador" ? "Plan Fundador" : `Cambiar a ${planLabel(destino)}`}
       eyebrow="Pago"
       size="md"
     >
@@ -334,7 +347,9 @@ function PagoManualModal({
               className="text-[0.62rem] font-mono uppercase tracking-[0.14em]"
               style={{ color: "var(--lime-bright)" }}
             >
-              {periodo === "anual" ? "Valor del plan por el año" : "Valor del plan por mes"}
+              {periodo === "fundador"
+                ? "Plan Ganadero Fundador, por el año"
+                : periodo === "anual" ? "Valor del plan por el año" : "Valor del plan por mes"}
             </div>
             <div className="text-2xl font-bold mt-0.5">{cop(valor)} COP</div>
             {conDescuento && (
@@ -345,6 +360,12 @@ function PagoManualModal({
             {periodo === "anual" && (
               <div className="text-xs opacity-75">
                 En vez de {cop(PLAN_LIMITS[destino].precioCOP * 12)} pagando mes a mes.
+              </div>
+            )}
+            {periodo === "fundador" && (
+              <div className="text-xs opacity-75">
+                Ese precio queda para siempre: cada año renueva por el mismo valor. Si en{" "}
+                {DIAS_GARANTIA} días no le sirve, le devolvemos el 100 % escribiendo a soporte@rumea.app.
               </div>
             )}
           </div>

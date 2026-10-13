@@ -18,6 +18,7 @@ import {
   IconSparkles,
 } from "./icons";
 import PricingCards from "./PricingCards";
+import OfertaFundador, { QUIERE_FUNDADOR_KEY } from "./OfertaFundador";
 import CalculadoraPerdidas from "./CalculadoraPerdidas";
 
 /** Páginas públicas: la portada es corta (una pantalla) y el resto vive aparte. */
@@ -1324,6 +1325,16 @@ function Pricing({ onSignup }: { onSignup: () => void }) {
   return (
     <section id="precios" className="relative pt-12 md:pt-16 pb-24 md:pb-32" style={{ background: "var(--sand)" }}>
       <div ref={ref} className="reveal max-w-6xl mx-auto px-4 md:px-6">
+
+        <div className="mb-8">
+          <OfertaFundador
+            textoBoton="Crear mi cuenta y ser Fundador"
+            onElegir={() => {
+              try { window.localStorage.setItem(QUIERE_FUNDADOR_KEY, "1"); } catch { /* ignore */ }
+              onSignup();
+            }}
+          />
+        </div>
 
         <PricingCards onSelect={() => onSignup()} />
 

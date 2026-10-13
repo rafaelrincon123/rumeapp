@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useDB } from "@/lib/useDB";
 import { useFincaActiva } from "@/lib/useFincaActiva";
@@ -18,11 +18,14 @@ import {
   fechaDesdeEdad,
   siguienteNumero,
 } from "@/lib/animalesForm";
+import { MAX_FOTOS, leerCuaderno } from "@/lib/leerCuaderno";
 
 // Registrar varios animales en una sola pantalla: una fila por animal con lo
 // mínimo (chapeta o nombre, qué animal es, edad, raza). Cada fila nueva copia
 // la anterior y sigue la numeración de la chapeta. También se pueden pegar
-// las columnas copiadas de un Excel o de Google Sheets.
+// las columnas copiadas de un Excel o de Google Sheets, o leer una foto del
+// cuaderno (la lee Claude en la Edge Function leer-cuaderno y las filas
+// quedan aquí para revisar antes de guardar).
 
 interface Fila {
   id: string;
@@ -105,6 +108,9 @@ export default function RegistroVarios({
   const [lleno, setLleno] = useState(false);
   const [pegando, setPegando] = useState(false);
   const [texto, setTexto] = useState("");
+  const [leyendo, setLeyendo] = useState(false);
+  const [notaFoto, setNotaFoto] = useState<string | null>(null);
+  const fotosRef = useRef<HTMLInputElement>(null);
 
   const existentes = db?.animales ?? [];
   const plan = activa ? planEfectivo(activa) : null;
@@ -154,6 +160,39 @@ export default function RegistroVarios({
     setFilas((fs) => [...fs.filter(filaLlena), ...pegadas]);
     setTexto("");
     setPegando(false);
+  }
+
+  async function usarFotos(lista: FileList | null) {
+    const archivos = Array.from(lista ?? []).filter((f) => f.type.startsWith("image/"));
+    if (fotosRef.current) fotosRef.current.value = "";
+    if (archivos.length === 0 || !activa) return;
+    setError(null);
+    setNotaFoto(null);
+    setLeyendo(true);
+    try {
+      const { animales, nota } = await leerCuaderno(activa.id, archivos);
+      if (animales.length === 0) {
+        setError(nota || "No encontramos animales en la foto. Pruebe con una foto de frente y con buena luz.");
+        return;
+      }
+      const leidas: Fila[] = animales.map((a) => ({
+        id: uid(),
+        chapeta: a.chapeta ?? "",
+        nombre: a.nombre ?? "",
+        categoria: a.categoria ?? "",
+        edadMeses: a.edad_meses != null && a.edad_meses >= 0 ? String(edadMasCercana(a.edad_meses)) : "",
+        raza: a.raza ?? "",
+      }));
+      setFilas((fs) => [...fs.filter(filaLlena), ...leidas]);
+      const extra = archivos.length > MAX_FOTOS ? ` Solo leímos las primeras ${MAX_FOTOS} fotos.` : "";
+      setNotaFoto(
+        `Leímos ${leidas.length} animal${leidas.length === 1 ? "" : "es"}. Revise cada fila y complete lo que falte antes de guardar.${extra}${nota ? " " + nota : ""}`
+      );
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLeyendo(false);
+    }
   }
 
   function guardar(e: React.FormEvent) {
@@ -236,6 +275,35 @@ export default function RegistroVarios({
         Una fila por animal. Cada fila nueva copia la anterior y sigue el número de la chapeta: solo
         cambie lo que sea distinto. Sin chapeta, le ponemos un número.
       </p>
+
+      <div className="rounded-xl p-3 flex flex-col sm:flex-row sm:items-center gap-3" style={{ background: "rgba(184, 206, 122, 0.22)" }}>
+        <p className="text-sm flex-1">
+          <b>¿Tiene sus animales en un cuaderno o en Excel?</b> Tómele una foto (hasta {MAX_FOTOS}) y
+          nosotros llenamos las filas por usted.
+        </p>
+        <input
+          ref={fotosRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={(e) => void usarFotos(e.target.files)}
+        />
+        <button
+          type="button"
+          className="btn btn-primary justify-center shrink-0"
+          onClick={() => fotosRef.current?.click()}
+          disabled={leyendo}
+        >
+          {leyendo ? "Leyendo la foto…" : "📷 Leer foto del cuaderno"}
+        </button>
+      </div>
+      {leyendo && (
+        <p className="text-sm text-muted -mt-2">Esto toma unos segundos. No cierre esta ventana.</p>
+      )}
+      {notaFoto && (
+        <div className="text-sm bg-surface-2 rounded-lg px-3 py-2">{notaFoto}</div>
+      )}
 
       {caben !== null && plan && (
         <div className="text-xs text-muted bg-surface-2 rounded-lg px-3 py-2">

@@ -12,6 +12,7 @@ import {
 } from "@/components/HomeArt";
 import { PrimerosPasos, RecorridoBienvenida } from "@/components/Tutorial";
 import { AvisoPrueba } from "@/components/OfertaPrueba";
+import { RecordatorioFundador } from "@/components/OfertaFundador";
 
 type TileTone = "forest" | "copper" | "moss" | "citrus";
 
@@ -114,6 +115,7 @@ export default function Home() {
   return (
     <div className="relative z-10">
       <RecorridoBienvenida />
+      <RecordatorioFundador />
       <AvisoPrueba />
       <PrimerosPasos />
       <div className="grid grid-cols-2 gap-3 md:gap-5 max-w-3xl mx-auto">

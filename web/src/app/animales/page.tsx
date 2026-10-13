@@ -185,7 +185,7 @@ export default function AnimalesPage() {
             nombreArchivo="animales"
           />
           <button className="btn" onClick={() => abrirNuevo("varios")}>
-            Varios a la vez
+            📷 Varios o desde foto
           </button>
           <button className="btn btn-primary" onClick={() => abrirNuevo("uno")}>
             + Nuevo animal
@@ -1031,7 +1031,7 @@ function AnimalForm({
             onClick={onVarios}
             className="md:col-span-2 -mt-2 text-left text-sm font-medium text-primary underline underline-offset-4"
           >
-            ¿Tiene varios animales? Regístrelos todos de una vez →
+            ¿Tiene varios animales o un cuaderno? Cárguelos todos de una vez, incluso con una foto →
           </button>
         )}
         {campoChapeta}

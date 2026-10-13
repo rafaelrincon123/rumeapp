@@ -36,10 +36,11 @@ const DIA = 24 * HORA;
 // Rutas a las que puede llevar el botón (la firma cubre la clave, no la URL).
 const RUTAS: Record<string, string> = {
   inicio: "/",
-  animales: "/animales?nuevo=1",
+  animales: "/animales?nuevo=1&modo=varios",
   peso: "/peso?nuevo=1",
   leche: "/produccion?nuevo=1",
   plan: "/plan",
+  fundador: "/plan?activar=fundador",
 };
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
@@ -144,7 +145,7 @@ async function correoDia2(u: User, finca: string, animales: number): Promise<{ a
     <p style="margin:0 0 14px;">${nombre ? "Hola, " + esc(nombre) + ":" : "Hola:"}</p>
     <p style="margin:0 0 14px;">Desde RumeApp puede llevar el control de peso y de producción de leche de <b style="color:#B8CE7A;">${esc(finca)}</b>. Registrar cada dato toma menos de un minuto.</p>
     <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 14px;">
-      ${sinAnimales ? punto("✓", "Antes de empezar", "Registre sus animales. Basta con el número o el nombre de cada uno; los demás datos puede completarlos después.") : ""}
+      ${sinAnimales ? punto("✓", "Antes de empezar", "Registre sus animales. Si los tiene en un cuaderno o en Excel, tómele una foto: RumeApp lee la lista y los carga por usted.") : ""}
       ${punto("1", "Control de peso", "Registre el peso de cada animal, tomado con báscula o con cinta bovinométrica. A partir del segundo pesaje, RumeApp calcula la ganancia diaria de peso.")}
       ${punto("2", "Producción de leche", "Registre los litros de cada vaca en el ordeño de la mañana y de la tarde. RumeApp totaliza la producción del día y le muestra su evolución semanal.")}
     </table>
@@ -176,6 +177,8 @@ async function correoPrueba(
 ): Promise<{ asunto: string; html: string }> {
   const nombre = primerNombre(u);
   const fin = fechaLarga(finISO);
+  const { data: cupos } = await admin.rpc("cupos_fundador");
+  const cuposFundador = typeof cupos === "number" ? cupos : 0;
   const cupo = "hasta 5 animales";
   const registrados = animales === 1 ? "1 animal registrado" : `${animales} animales registrados`;
   const cuerpo = `
@@ -187,7 +190,10 @@ async function correoPrueba(
     <p style="margin:0 0 14px;">${terminada
       ? `Toda su información sigue guardada. Su finca está ahora en el plan gratuito, que permite registrar ${cupo}; para seguir agregando animales necesita activar el plan Ganadero.`
       : `Cuando termine, la finca pasa al plan gratuito: toda su información queda guardada, pero solo podrá registrar ${cupo}.`}</p>
-    <p style="margin:0 0 14px;">El plan Ganadero cuesta $25.000 al mes (los tres primeros pagos mensuales tienen 20 % de descuento: $20.000) o $225.000 al año. Se paga con tarjeta, PSE o Nequi desde la sección <b>Plan</b> de la aplicación, y se activa de inmediato.</p>`;
+    ${cuposFundador > 0
+      ? `<p style="margin:0 0 14px;"><b style="color:#B8CE7A;">Plan Fundador:</b> mientras haya cupos (quedan ${cuposFundador}), el plan Ganadero cuesta <b>$150.000 el año, con ese precio para siempre</b>. Si en 30 días no le sirve, le devolvemos el 100 %.</p>`
+      : ""}
+    <p style="margin:0 0 14px;">${cuposFundador > 0 ? "También puede pagarlo mes a mes: " : "El plan Ganadero cuesta "}$25.000 al mes (los tres primeros pagos mensuales tienen 20 % de descuento: $20.000). Se paga con tarjeta, PSE o Nequi desde la sección <b>Plan</b> de la aplicación, y se activa de inmediato.</p>`;
   return {
     asunto: terminada
       ? `Terminó la prueba del plan Ganadero de ${finca}`
@@ -195,7 +201,11 @@ async function correoPrueba(
     html: marco(
       terminada ? "Terminó su prueba del plan Ganadero" : "Su prueba del plan Ganadero termina pronto",
       cuerpo,
-      BOTON(await enlaceAcceso(u.id, "plan", 7), "Ver mi plan"),
+      cuposFundador > 0
+        ? `${BOTON(await enlaceAcceso(u.id, "fundador", 7), "Quiero ser Fundador")}
+           <div style="height:14px;line-height:14px;">&nbsp;</div>
+           ${BOTON_SECUNDARIO(await enlaceAcceso(u.id, "plan", 7), "Ver todos los planes")}`
+        : BOTON(await enlaceAcceso(u.id, "plan", 7), "Ver mi plan"),
       `Recibe este aviso porque su finca ${esc(finca)} tiene la prueba del plan Ganadero en RumeApp.`,
     ),
   };

@@ -191,6 +191,8 @@ export interface Finca {
   planPagado: boolean;
   /** Hasta cuándo dura el plan pagado en línea (Bold). null = sin vencimiento (pagos manuales). */
   planPagadoHasta: string | null;
+  /** Pagó el plan Fundador: renueva cada año a ese precio aunque ya no haya cupos. */
+  fundador: boolean;
 }
 
 export type RolFinca = "owner" | "admin" | "operario" | "viewer";

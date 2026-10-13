@@ -79,6 +79,18 @@ export default function TerminosPage() {
                 sigue funcionando con el plan Ranchero.
               </p>
               <p className="mt-3">
+                <strong>Plan Fundador.</strong> Mientras haya cupos (hasta 50 fincas), el plan Ganadero se
+                puede pagar como plan Fundador: un año por el valor indicado en la app, que se mantiene en
+                cada renovación anual de esa finca aunque la tarifa general suba. El precio se conserva
+                mientras la finca renueve; si deja vencer el plan, puede renovarlo después al mismo valor.
+              </p>
+              <p className="mt-3">
+                <strong>Garantía de 30 días del plan Fundador.</strong> Si dentro de los 30 días siguientes
+                al pago del plan Fundador decides que RumeApp no te sirve, escríbenos a soporte@rumea.app y
+                te devolvemos el 100 % del valor pagado; la finca vuelve al plan Ranchero y conservas toda tu
+                información.
+              </p>
+              <p className="mt-3">
                 No se realizan cobros automáticos ni recurrentes sin tu autorización explícita. RumeApp no
                 almacena datos de tarjetas de crédito o débito en ningún momento.
               </p>
