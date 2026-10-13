@@ -176,12 +176,27 @@ async function enviar(a: string, correo: { asunto: string; html: string }): Prom
 // ------------------------------------------------------------------- datos
 
 async function todosLosUsuarios(): Promise<User[]> {
+  // Auth responde "Database error finding users" si la página trae una cuenta
+  // que no puede leer (p. ej. banned_until = 'infinity'). Entonces esa página
+  // se lee de a una cuenta y se salta la dañada.
+  const POR_PAGINA = 10;
   const out: User[] = [];
   for (let page = 1; ; page++) {
-    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
-    if (error) throw error;
-    out.push(...data.users);
-    if (data.users.length < 1000) return out;
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: POR_PAGINA });
+    if (!error) {
+      out.push(...data.users);
+      if (data.users.length < POR_PAGINA) return out;
+      continue;
+    }
+    for (let k = (page - 1) * POR_PAGINA + 1; k <= page * POR_PAGINA; k++) {
+      const uno = await admin.auth.admin.listUsers({ page: k, perPage: 1 });
+      if (uno.error) {
+        console.warn("cuenta ilegible en la posición", k, uno.error.message);
+        continue;
+      }
+      if (uno.data.users.length === 0) return out;
+      out.push(...uno.data.users);
+    }
   }
 }
 
@@ -313,11 +328,16 @@ Deno.serve(async (req) => {
     return Response.json({ ok }, { status: ok ? 200 : 502 });
   }
 
-  const usuarios = await todosLosUsuarios();
-  const resumen = {
-    falta_paso: await faltaPaso(usuarios),
-    dia2: horaBogota() >= 6 && horaBogota() < 19 ? await dia2(usuarios) : "fuera de horario",
-  };
-  console.log("seguimiento", JSON.stringify(resumen));
-  return Response.json(resumen);
+  try {
+    const usuarios = await todosLosUsuarios();
+    const resumen = {
+      falta_paso: await faltaPaso(usuarios),
+      dia2: horaBogota() >= 6 && horaBogota() < 19 ? await dia2(usuarios) : "fuera de horario",
+    };
+    console.log("seguimiento", JSON.stringify(resumen));
+    return Response.json(resumen);
+  } catch (err) {
+    console.error("seguimiento falló", err);
+    return new Response(`Error: ${(err as Error)?.message ?? JSON.stringify(err)}`, { status: 500 });
+  }
 });
