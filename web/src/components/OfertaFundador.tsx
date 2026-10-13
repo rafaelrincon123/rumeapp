@@ -101,7 +101,7 @@ export default function OfertaFundador({
         </h2>
         <ul className="text-sm space-y-1.5 opacity-90">
           <li>
-            ✓ Equivale a <b>{cop(PRECIO_FUNDADOR / 12)} al mes</b> (normalmente son {cop(precioNormal)} al año).
+            ✓ Equivale a <b>{cop(PRECIO_FUNDADOR / 12)} al mes</b> (pagando mes a mes serían {cop(precioNormal)} al año).
           </li>
           <li>✓ Cada año renueva al mismo precio, aunque la tarifa suba.</li>
           <li>✓ Hasta {PLAN_LIMITS.ganadero.maxAnimales} animales, reparto entre socios y avisos de vacunas, purgas y partos.</li>
