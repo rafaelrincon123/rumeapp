@@ -113,47 +113,49 @@ async function correoFaltaPaso(u: User): Promise<{ asunto: string; html: string 
   const nombre = primerNombre(u);
   const sinConfirmar = !u.email_confirmed_at;
   const cuerpo = `
-    <p style="margin:0 0 14px;">Hola${nombre ? ", " + esc(nombre) : ""}:</p>
-    <p style="margin:0 0 14px;">${sinConfirmar
-      ? "Usted empezó a crear su cuenta en RumeApp, pero quedó faltando confirmar el correo."
-      : "Usted ya tiene su cuenta en RumeApp, pero quedó faltando crear su finca."}</p>
-    <p style="margin:0 0 14px;">Toque el botón y entra de una vez${sinConfirmar ? ", sin código" : ""}. Solo le va a pedir el nombre de su finca y queda lista para anotar sus animales, gastos y vacunas.</p>
-    <p style="margin:0;color:rgba(239,232,216,0.80);font-size:14px;">El plan gratis no vence y no pide tarjeta.</p>`;
+    <p style="margin:0 0 14px;">${nombre ? "Hola, " + esc(nombre) + ":" : "Hola:"}</p>
+    <p style="margin:0 0 14px;">Gracias por registrarse en RumeApp. ${sinConfirmar
+      ? "Para terminar, solo falta confirmar su correo electrónico."
+      : "Su cuenta ya está activa; solo falta crear su finca."}</p>
+    <p style="margin:0 0 14px;">Con el botón de abajo ${sinConfirmar ? "su correo queda confirmado y usted ingresa" : "usted ingresa"} directamente a la aplicación, sin necesidad de código ni contraseña. Allí solo tendrá que escribir el nombre de su finca para empezar a registrar sus animales, gastos y labores.</p>
+    <p style="margin:0;color:rgba(239,232,216,0.80);font-size:14px;">El plan gratuito no tiene fecha de vencimiento ni requiere tarjeta de crédito.</p>`;
   return {
-    asunto: nombre ? `${nombre}, le falta un paso para entrar a RumeApp` : "Le falta un paso para entrar a RumeApp",
+    asunto: nombre ? `${nombre}, su cuenta en RumeApp está casi lista` : "Su cuenta en RumeApp está casi lista",
     html: marco(
-      "Le falta un paso",
+      "Su cuenta está casi lista",
       cuerpo,
-      BOTON(await enlaceAcceso(u.id, "inicio", 14), "Entrar a RumeApp →"),
-      "Recibe este correo porque se registró en RumeApp con esta dirección. Si no fue usted, ignórelo.",
+      BOTON(await enlaceAcceso(u.id, "inicio", 14), "Terminar mi registro"),
+      "Recibe este correo porque se registró en RumeApp con esta dirección. Si no fue usted, puede ignorarlo.",
     ),
   };
 }
 
 async function correoDia2(u: User, finca: string, animales: number): Promise<{ asunto: string; html: string }> {
   const nombre = primerNombre(u);
-  const paso = (n: string, titulo: string, texto: string) => `
-    <tr><td valign="top" style="padding:8px 12px 8px 0;"><span style="display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;border-radius:13px;background:#B8CE7A;color:#14261A;font-weight:bold;font-size:13px;">${n}</span></td>
-        <td style="padding:8px 0;color:#EFE8D8;font-size:15px;line-height:1.5;"><b>${titulo}</b> ${texto}</td></tr>`;
+  const punto = (marca: string, titulo: string, texto: string) => `
+    <tr><td valign="top" style="padding:10px 14px 10px 0;"><span style="display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;border-radius:13px;background:#B8CE7A;color:#14261A;font-weight:bold;font-size:13px;">${marca}</span></td>
+        <td style="padding:10px 0;color:#EFE8D8;font-size:15px;line-height:1.55;"><b style="color:#B8CE7A;">${titulo}</b><br>${texto}</td></tr>`;
   const sinAnimales = animales === 0;
   const cuerpo = `
-    <p style="margin:0 0 14px;">Hola${nombre ? ", " + esc(nombre) : ""}:</p>
-    <p style="margin:0 0 14px;">Con RumeApp puede llevar en el celular el peso y la leche de <b style="color:#B8CE7A;">${esc(finca)}</b>, sin cuaderno. Se anota en menos de un minuto:</p>
+    <p style="margin:0 0 14px;">${nombre ? "Hola, " + esc(nombre) + ":" : "Hola:"}</p>
+    <p style="margin:0 0 14px;">Desde RumeApp puede llevar el control de peso y de producción de leche de <b style="color:#B8CE7A;">${esc(finca)}</b>. Registrar cada dato toma menos de un minuto.</p>
     <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 14px;">
-      ${sinAnimales ? paso("✓", "Primero registre sus animales.", "Con el número o el nombre basta; lo demás se completa después.") : ""}
-      ${paso("1", "Peso:", "anote el peso de un animal (con báscula o con cinta). Desde el segundo pesaje, RumeApp le muestra cuántos gramos sube al día.")}
-      ${paso("2", "Leche:", "anote los litros de la mañana y de la tarde de cada vaca. RumeApp le suma el total del día y le arma la gráfica de la semana.")}
+      ${sinAnimales ? punto("✓", "Antes de empezar", "Registre sus animales. Basta con el número o el nombre de cada uno; los demás datos puede completarlos después.") : ""}
+      ${punto("1", "Control de peso", "Registre el peso de cada animal, tomado con báscula o con cinta bovinométrica. A partir del segundo pesaje, RumeApp calcula la ganancia diaria de peso.")}
+      ${punto("2", "Producción de leche", "Registre los litros de cada vaca en el ordeño de la mañana y de la tarde. RumeApp totaliza la producción del día y le muestra su evolución semanal.")}
     </table>
-    <p style="margin:0;color:rgba(239,232,216,0.80);font-size:14px;">Así sabe qué animales están rindiendo y cuáles no, con números y no de memoria.</p>`;
+    <p style="margin:0;color:rgba(239,232,216,0.80);font-size:14px;">Con estos registros sabrá con certeza qué animales están rindiendo y cuáles necesitan atención.</p>`;
   const botones = sinAnimales
-    ? BOTON(await enlaceAcceso(u.id, "animales", 7), "Registrar mis animales →")
-    : `${BOTON(await enlaceAcceso(u.id, "peso", 7), "Anotar un pesaje →")}
+    ? BOTON(await enlaceAcceso(u.id, "animales", 7), "Registrar mis animales")
+    : `${BOTON(await enlaceAcceso(u.id, "peso", 7), "Registrar un pesaje")}
        <div style="height:14px;line-height:14px;">&nbsp;</div>
-       ${BOTON_SECUNDARIO(await enlaceAcceso(u.id, "leche", 7), "Anotar el ordeño de hoy")}`;
+       ${BOTON_SECUNDARIO(await enlaceAcceso(u.id, "leche", 7), "Registrar la producción de hoy")}`;
   return {
-    asunto: nombre ? `${nombre}, lleve el peso y la leche en RumeApp 🐄` : "Lleve el peso y la leche en RumeApp 🐄",
+    asunto: nombre
+      ? `${nombre}, controle el peso y la producción de leche de su hato`
+      : "Controle el peso y la producción de leche de su hato",
     html: marco(
-      "El peso y la leche, en el celular",
+      "Control de peso y producción de leche",
       cuerpo,
       botones,
       `Recibe este correo porque creó la finca ${esc(finca)} en RumeApp. <a href="${await enlaceBaja(u.id)}" style="color:rgba(239,232,216,0.55);">Dejar de recibir estos correos</a>.`,
