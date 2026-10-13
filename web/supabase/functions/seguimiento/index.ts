@@ -8,6 +8,9 @@
 //   · "dia2": dueños de fincas creadas hace 20 h a 10 días que aún no han
 //     anotado ni pesajes ni leche: les muestra cómo llevar el peso y el ordeño.
 //     Solo de 6 a. m. a 7 p. m. (Colombia) y respetando la baja de correos.
+//   · "prueba_aviso:<finca>" (faltan 3 días o menos) y "prueba_fin:<finca>"
+//     (terminó hace menos de 2 días): prueba del plan Ganadero sin pagar.
+//     Mismo horario; es un aviso de la cuenta, así que no depende de la baja.
 //   Body opcional para probar: { prueba: "falta_paso" | "dia2", user_id, a }
 //   → manda ese correo de ese usuario al correo `a`, sin registrar el envío.
 // GET ?u=<user_id>&e=<vence epoch s>&r=<ruta>&t=<firma>: botón de los correos.
@@ -36,6 +39,7 @@ const RUTAS: Record<string, string> = {
   animales: "/animales?nuevo=1",
   peso: "/peso?nuevo=1",
   leche: "/produccion?nuevo=1",
+  plan: "/plan",
 };
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
@@ -163,6 +167,40 @@ async function correoDia2(u: User, finca: string, animales: number): Promise<{ a
   };
 }
 
+function fechaLarga(iso: string): string {
+  return new Intl.DateTimeFormat("es-CO", { timeZone: "America/Bogota", day: "numeric", month: "long" }).format(new Date(iso));
+}
+
+async function correoPrueba(
+  u: User, finca: string, animales: number, finISO: string, terminada: boolean,
+): Promise<{ asunto: string; html: string }> {
+  const nombre = primerNombre(u);
+  const fin = fechaLarga(finISO);
+  const cupo = "hasta 5 animales";
+  const registrados = animales === 1 ? "1 animal registrado" : `${animales} animales registrados`;
+  const cuerpo = `
+    <p style="margin:0 0 14px;">${nombre ? "Hola, " + esc(nombre) + ":" : "Hola:"}</p>
+    <p style="margin:0 0 14px;">${terminada
+      ? `La prueba gratuita del plan Ganadero de <b style="color:#B8CE7A;">${esc(finca)}</b> terminó el ${fin}.`
+      : `La prueba gratuita del plan Ganadero de <b style="color:#B8CE7A;">${esc(finca)}</b> termina el <b>${fin}</b>.`}
+      Hoy tiene ${registrados}.</p>
+    <p style="margin:0 0 14px;">${terminada
+      ? `Toda su información sigue guardada. Su finca está ahora en el plan gratuito, que permite registrar ${cupo}; para seguir agregando animales necesita activar el plan Ganadero.`
+      : `Cuando termine, la finca pasa al plan gratuito: toda su información queda guardada, pero solo podrá registrar ${cupo}.`}</p>
+    <p style="margin:0 0 14px;">El plan Ganadero cuesta $25.000 al mes (los tres primeros pagos mensuales tienen 20 % de descuento: $20.000) o $225.000 al año. Se paga con tarjeta, PSE o Nequi desde la sección <b>Plan</b> de la aplicación, y se activa de inmediato.</p>`;
+  return {
+    asunto: terminada
+      ? `Terminó la prueba del plan Ganadero de ${finca}`
+      : `La prueba del plan Ganadero de ${finca} termina el ${fin}`,
+    html: marco(
+      terminada ? "Terminó su prueba del plan Ganadero" : "Su prueba del plan Ganadero termina pronto",
+      cuerpo,
+      BOTON(await enlaceAcceso(u.id, "plan", 7), "Ver mi plan"),
+      `Recibe este aviso porque su finca ${esc(finca)} tiene la prueba del plan Ganadero en RumeApp.`,
+    ),
+  };
+}
+
 async function enviar(a: string, correo: { asunto: string; html: string }): Promise<boolean> {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -270,6 +308,25 @@ async function dia2(usuarios: User[]): Promise<string[]> {
   return enviadosA;
 }
 
+async function avisosPrueba(usuarios: User[]): Promise<string[]> {
+  const ahora = Date.now();
+  const { data: fincas } = await admin.from("fincas").select("id, nombre, owner_user_id, trial_ends_at")
+    .not("trial_ends_at", "is", null).eq("plan_pagado", false)
+    .gte("trial_ends_at", new Date(ahora - 2 * DIA).toISOString())
+    .lte("trial_ends_at", new Date(ahora + 3 * DIA).toISOString());
+  const porId = new Map(usuarios.map((u) => [u.id, u]));
+  const enviadosA: string[] = [];
+  for (const f of fincas ?? []) {
+    const u = porId.get(f.owner_user_id);
+    if (!u?.email) continue;
+    const terminada = new Date(f.trial_ends_at).getTime() <= ahora;
+    if (!(await marcar(u.id, `${terminada ? "prueba_fin" : "prueba_aviso"}:${f.id}`))) continue;
+    const correo = await correoPrueba(u, f.nombre, await contar("animales", f.id), f.trial_ends_at, terminada);
+    if (await enviar(u.email, correo)) enviadosA.push(u.email);
+  }
+  return enviadosA;
+}
+
 // ------------------------------------------------------------------ handler
 
 async function acceso(url: URL): Promise<Response> {
@@ -319,6 +376,11 @@ Deno.serve(async (req) => {
     let correo;
     if (body.prueba === "falta_paso") {
       correo = await correoFaltaPaso(data.user);
+    } else if (body.prueba === "prueba_aviso" || body.prueba === "prueba_fin") {
+      const { data: f } = await admin.from("fincas").select("id, nombre").eq("owner_user_id", body.user_id)
+        .order("created_at").limit(1).maybeSingle();
+      correo = await correoPrueba(data.user, f?.nombre ?? "su finca", f ? await contar("animales", f.id) : 0,
+        new Date(Date.now() + 3 * DIA).toISOString(), body.prueba === "prueba_fin");
     } else {
       const { data: f } = await admin.from("fincas").select("id, nombre").eq("owner_user_id", body.user_id)
         .order("created_at").limit(1).maybeSingle();
@@ -330,9 +392,11 @@ Deno.serve(async (req) => {
 
   try {
     const usuarios = await todosLosUsuarios();
+    const enHorario = horaBogota() >= 6 && horaBogota() < 19;
     const resumen = {
       falta_paso: await faltaPaso(usuarios),
-      dia2: horaBogota() >= 6 && horaBogota() < 19 ? await dia2(usuarios) : "fuera de horario",
+      dia2: enHorario ? await dia2(usuarios) : "fuera de horario",
+      prueba: enHorario ? await avisosPrueba(usuarios) : "fuera de horario",
     };
     console.log("seguimiento", JSON.stringify(resumen));
     return Response.json(resumen);

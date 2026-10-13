@@ -140,10 +140,32 @@ export default function OfertaPrueba({ motivo, onActivada }: Props) {
  */
 export function AvisoPrueba() {
   const { activa } = useFincaActiva();
-  if (!activa) return null;
+  const { db } = useDB();
+  if (!activa || activa.planPagado) return null;
   const dias = diasDePruebaRestantes(activa);
-  if (dias <= 0 || activa.planPagado) return null;
+
+  // Prueba terminada: si quedó con más animales de los que permite el plan
+  // gratis, avisarle que todo sigue guardado y por qué no puede agregar más.
+  if (dias <= 0) {
+    const animales = db?.animales.length ?? 0;
+    const cupo = PLAN_LIMITS.ranchero.maxAnimales ?? 0;
+    if (!activa.trialEndsAt || animales <= cupo) return null;
+    return (
+      <Link href="/plan" className="card max-w-3xl mx-auto mb-5 p-3 md:p-4 flex items-center gap-3 border-primary">
+        <span className="w-9 h-9 rounded-full bg-primary-soft text-primary flex items-center justify-center shrink-0">
+          <IconSparkles size={16} />
+        </span>
+        <span className="flex-1 min-w-0 text-sm">
+          Terminó su prueba del plan <b>Ganadero</b>. Sus {animales} animales y todos sus registros siguen
+          guardados, pero el plan gratis permite registrar hasta {cupo}. Para seguir agregando, active un plan.
+        </span>
+        <span className="text-sm font-semibold text-primary whitespace-nowrap">Ver planes →</span>
+      </Link>
+    );
+  }
+
   const urgente = dias <= 3;
+  const fin = fmtDate(activa.trialEndsAt!);
   return (
     <Link
       href="/plan"
@@ -154,8 +176,8 @@ export function AvisoPrueba() {
       </span>
       <span className="flex-1 min-w-0 text-sm">
         Está probando el plan <b>{planLabel(activa.plan)}</b> gratis: le{" "}
-        {dias === 1 ? "queda 1 día" : `quedan ${dias} días`}.
-        {urgente && " Para no volver al plan gratis, actívelo antes de que termine."}
+        {dias === 1 ? "queda 1 día" : `quedan ${dias} días`} (hasta el {fin}).
+        {urgente && " Cuando termine, la finca vuelve al plan gratis: sus datos quedan guardados, pero solo podrá registrar hasta 5 animales."}
       </span>
       <span className="text-sm font-semibold text-primary whitespace-nowrap">Ver planes →</span>
     </Link>
