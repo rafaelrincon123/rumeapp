@@ -163,10 +163,20 @@ export function RecorridoBienvenida() {
                 className="btn btn-primary justify-center"
                 onClick={() => {
                   cerrar();
+                  router.push(hrefNuevo("/animales", { modo: "varios" }));
+                }}
+              >
+                📷 Cargar mis animales con una foto →
+              </button>
+              <button
+                type="button"
+                className="btn justify-center"
+                onClick={() => {
+                  cerrar();
                   router.push(hrefNuevo("/animales"));
                 }}
               >
-                Registrar mi primer animal →
+                Registrar uno por uno
               </button>
               <button type="button" className="btn btn-ghost justify-center" onClick={cerrar}>
                 Explorar por mi cuenta
@@ -210,6 +220,8 @@ interface Paso {
   titulo: string;
   como: string;
   boton: string;
+  /** Adonde lleva el botón (por defecto, el formulario de nuevo de `ruta`). */
+  href?: string;
   opcional?: boolean;
   /** Enlace secundario bajo el botón (p. ej. registrar varios a la vez). */
   alterno?: { texto: string; href: string };
@@ -239,10 +251,11 @@ export function PrimerosPasos() {
       id: "animal",
       hecho: db.animales.length > 0,
       ruta: "/animales",
-      titulo: "Registre su primer animal",
-      como: "Basta con la chapeta o un nombre, qué animal es (vaca, novilla, toro…) y su edad aproximada. Toma menos de un minuto.",
-      boton: "Registrar animal",
-      alterno: { texto: "¿Los tiene en un cuaderno o en Excel? Cárguelos con una foto", href: hrefNuevo("/animales", { modo: "varios" }) },
+      titulo: "Cargue sus animales",
+      como: "¿Los tiene en un cuaderno o en Excel? Tómele una foto y la app llena la lista por usted; solo revisa y guarda.",
+      boton: "📷 Cargar con una foto",
+      href: hrefNuevo("/animales", { modo: "varios" }),
+      alterno: { texto: "Prefiero registrarlos uno por uno", href: hrefNuevo("/animales") },
     },
     {
       id: "gasto",
@@ -341,7 +354,7 @@ export function PrimerosPasos() {
                     <span className="text-sm font-semibold">{p.titulo}</span>
                   </div>
                   <p className="text-sm text-muted mt-2 ml-9 leading-relaxed">{p.como}</p>
-                  <Link href={hrefNuevo(p.ruta)} className="btn btn-primary mt-3 ml-9 inline-flex">
+                  <Link href={p.href ?? hrefNuevo(p.ruta)} className="btn btn-primary mt-3 ml-9 inline-flex">
                     {p.boton} →
                   </Link>
                   {p.alterno && (

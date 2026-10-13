@@ -19,6 +19,7 @@ import {
   siguienteNumero,
 } from "@/lib/animalesForm";
 import { MAX_FOTOS, leerCuaderno } from "@/lib/leerCuaderno";
+import { track } from "@vercel/analytics";
 
 // Registrar varios animales en una sola pantalla: una fila por animal con lo
 // mínimo (chapeta o nombre, qué animal es, edad, raza). Cada fila nueva copia
@@ -110,6 +111,8 @@ export default function RegistroVarios({
   const [texto, setTexto] = useState("");
   const [leyendo, setLeyendo] = useState(false);
   const [notaFoto, setNotaFoto] = useState<string | null>(null);
+  // Filas que llegaron de una foto: para medir si la lectura termina en animales guardados.
+  const [deFoto, setDeFoto] = useState<Set<string>>(() => new Set());
   const fotosRef = useRef<HTMLInputElement>(null);
 
   const existentes = db?.animales ?? [];
@@ -184,6 +187,7 @@ export default function RegistroVarios({
         raza: a.raza ?? "",
       }));
       setFilas((fs) => [...fs.filter(filaLlena), ...leidas]);
+      setDeFoto((s) => new Set([...s, ...leidas.map((f) => f.id)]));
       const extra = archivos.length > MAX_FOTOS ? ` Solo leímos las primeras ${MAX_FOTOS} fotos.` : "";
       setNotaFoto(
         `Leímos ${leidas.length} animal${leidas.length === 1 ? "" : "es"}. Revise cada fila y complete lo que falte antes de guardar.${extra}${nota ? " " + nota : ""}`
@@ -266,6 +270,14 @@ export default function RegistroVarios({
     });
     const primero = existentes.length === 0;
     updateCollection("animales", (list) => [...list, ...nuevos]);
+    const guardadasDeFoto = conDatos.filter(({ f }) => deFoto.has(f.id)).length;
+    if (guardadasDeFoto > 0) {
+      try {
+        track("CuadernoGuardado", { animales: guardadasDeFoto });
+      } catch {
+        /* ignore */
+      }
+    }
     onSaved({ animales: nuevos, nroAuto, primero, modo: "varios" });
   }
 
