@@ -178,7 +178,8 @@ async function correoPrueba(
   const nombre = primerNombre(u);
   const fin = fechaLarga(finISO);
   const { data: cupos } = await admin.rpc("cupos_fundador");
-  const cuposFundador = typeof cupos === "number" ? cupos : 0;
+  // Oferta abierta hasta el 31 de octubre y mientras haya cupos (sin decir cuántos quedan).
+  const cuposFundador = typeof cupos === "number" && Date.now() < Date.parse("2026-11-01T05:00:00Z") ? cupos : 0;
   const cupo = "hasta 5 animales";
   const registrados = animales === 1 ? "1 animal registrado" : `${animales} animales registrados`;
   const cuerpo = `
@@ -191,7 +192,7 @@ async function correoPrueba(
       ? `Toda su información sigue guardada. Su finca está ahora en el plan gratuito, que permite registrar ${cupo}; para seguir agregando animales necesita activar el plan Ganadero.`
       : `Cuando termine, la finca pasa al plan gratuito: toda su información queda guardada, pero solo podrá registrar ${cupo}.`}</p>
     ${cuposFundador > 0
-      ? `<p style="margin:0 0 14px;"><b style="color:#B8CE7A;">Plan Fundador:</b> mientras haya cupos (quedan ${cuposFundador}), el plan Ganadero cuesta <b>$150.000 el año, con ese precio para siempre</b>. Si en 30 días no le sirve, le devolvemos el 100 %.</p>`
+      ? `<p style="margin:0 0 14px;"><b style="color:#B8CE7A;">Plan Fundador:</b> solo hasta el 31 de octubre y para las primeras 50 fincas, el plan Ganadero cuesta <b>$150.000 el año, con ese precio para siempre</b>. Si en 30 días no le sirve, le devolvemos el 100 %.</p>`
       : ""}
     <p style="margin:0 0 14px;">${cuposFundador > 0 ? "También puede pagarlo mes a mes: " : "El plan Ganadero cuesta "}$25.000 al mes (los tres primeros pagos mensuales tienen 20 % de descuento: $20.000). Se paga con tarjeta, PSE o Nequi desde la sección <b>Plan</b> de la aplicación, y se activa de inmediato.</p>`;
   return {

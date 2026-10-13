@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { getSupabase } from "@/lib/supabase";
-import { CUPOS_FUNDADOR, DIAS_GARANTIA, PLAN_LIMITS, PRECIO_FUNDADOR, cop } from "@/lib/plans";
+import { CUPOS_FUNDADOR, DIAS_GARANTIA, FIN_FUNDADOR_TEXTO, PLAN_LIMITS, PRECIO_FUNDADOR, cop, fundadorAbierto } from "@/lib/plans";
 
 // Plan Fundador: plan Ganadero por $150.000 el año, precio para siempre, para
-// las primeras 50 fincas. Los cupos que quedan salen de cupos_fundador() (la
-// puede llamar cualquiera, también la landing sin sesión). Si ya no quedan
-// cupos no se muestra, salvo a una finca que ya es fundadora (para renovar).
+// las primeras 50 fincas y hasta el 31 de octubre. No se muestra cuántos
+// cupos quedan (decisión de Rafael); cupos_fundador() solo sirve para
+// esconder la oferta si se acaban. Vencida o sin cupos no se muestra, salvo a
+// una finca que ya es fundadora (para renovar).
 
 /** La persona eligió la oferta en la página pública antes de tener cuenta. */
 export const QUIERE_FUNDADOR_KEY = "rumeapp:quiereFundador";
@@ -77,7 +78,7 @@ export default function OfertaFundador({
   esFundador?: boolean;
 }) {
   const cupos = useCuposFundador();
-  if (!esFundador && (cupos === null || cupos <= 0)) return null;
+  if (!esFundador && (cupos === null || cupos <= 0 || !fundadorAbierto())) return null;
   const precioNormal = PLAN_LIMITS.ganadero.precioCOP * 12;
 
   return (
@@ -92,7 +93,7 @@ export default function OfertaFundador({
         >
           {esFundador
             ? "Usted es Fundador"
-            : `Plan Fundador · quedan ${cupos} de ${CUPOS_FUNDADOR} cupos`}
+            : `Plan Fundador · solo hasta el ${FIN_FUNDADOR_TEXTO}`}
         </div>
         <h2 className="text-xl md:text-2xl font-bold leading-tight">
           {esFundador
@@ -127,7 +128,7 @@ export default function OfertaFundador({
         </button>
         {!esFundador && (
           <span className="text-[0.7rem] opacity-70 md:text-right">
-            Solo para las primeras {CUPOS_FUNDADOR} fincas.
+            Cupos limitados: solo las primeras {CUPOS_FUNDADOR} fincas, hasta el {FIN_FUNDADOR_TEXTO}.
           </span>
         )}
       </div>

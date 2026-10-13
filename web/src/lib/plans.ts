@@ -52,6 +52,13 @@ export type Periodo = "mensual" | "anual" | "fundador";
 export const PRECIO_FUNDADOR = 150_000;
 export const CUPOS_FUNDADOR = 50;
 export const DIAS_GARANTIA = 30;
+/** La oferta se puede tomar hasta el 31 de octubre de 2026 (fin del día en Colombia). */
+export const FIN_FUNDADOR = "2026-11-01T05:00:00Z";
+export const FIN_FUNDADOR_TEXTO = "31 de octubre";
+
+export function fundadorAbierto(ahora = new Date()): boolean {
+  return ahora < new Date(FIN_FUNDADOR);
+}
 
 /** Descuento del plan anual sobre 12 meses de plan mensual. */
 export const DESCUENTO_ANUAL = 0.25;

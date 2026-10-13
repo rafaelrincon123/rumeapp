@@ -38,6 +38,7 @@ const MESES_DESCUENTO_INICIAL = 3;
 const NOMBRE_PLAN: Record<string, string> = { ganadero: "Ganadero", hacienda: "Hacienda" };
 // Plan Fundador (espejo de PRECIO_FUNDADOR en plans.ts): solo Ganadero.
 const PRECIO_FUNDADOR = 150_000;
+const FIN_FUNDADOR = new Date("2026-11-01T05:00:00Z"); // 31 de octubre, fin del día en Colombia
 
 function monto(plan: string, periodo: string, descuentoInicial: boolean): number {
   if (periodo === "fundador") return PRECIO_FUNDADOR;
@@ -104,6 +105,9 @@ Deno.serve(async (req: Request) => {
       return json({ error: "Solo el dueño de la finca puede pagar el plan" }, 403);
     }
     if (periodo === "fundador" && !finca.fundador) {
+      if (new Date() >= FIN_FUNDADOR) {
+        return json({ error: "La oferta del plan Fundador terminó el 31 de octubre" }, 409);
+      }
       const { data: cupos } = await admin.rpc("cupos_fundador");
       if (!cupos || (cupos as number) <= 0) {
         return json({ error: "Ya se acabaron los cupos del plan Fundador" }, 409);

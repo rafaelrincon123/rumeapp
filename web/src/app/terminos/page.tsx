@@ -79,8 +79,8 @@ export default function TerminosPage() {
                 sigue funcionando con el plan Ranchero.
               </p>
               <p className="mt-3">
-                <strong>Plan Fundador.</strong> Mientras haya cupos (hasta 50 fincas), el plan Ganadero se
-                puede pagar como plan Fundador: un año por el valor indicado en la app, que se mantiene en
+                <strong>Plan Fundador.</strong> Hasta el 31 de octubre de 2026 y mientras haya cupos (hasta 50
+                fincas), el plan Ganadero se puede pagar como plan Fundador: un año por el valor indicado en la app, que se mantiene en
                 cada renovación anual de esa finca aunque la tarifa general suba. El precio se conserva
                 mientras la finca renueve; si deja vencer el plan, puede renovarlo después al mismo valor.
               </p>
