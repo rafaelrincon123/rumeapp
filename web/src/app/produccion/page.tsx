@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useDB } from "@/lib/useDB";
+import { useAbrirNuevo } from "@/lib/tutorial";
 import { updateCollection, uid, nowISO } from "@/lib/storage";
 import { fmtDate, fmtNumber, todayISO, ymdLocal } from "@/lib/format";
 import { ProduccionLeche } from "@/lib/types";
@@ -18,6 +19,13 @@ export default function ProduccionPage() {
   const [filtroAnimal, setFiltroAnimal] = useState("");
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
+
+  // Desde el correo del día 2 (?nuevo=1): abrir el formulario.
+  useAbrirNuevo(() => {
+    setEditLec(null);
+    setModeLec("edit");
+    setOpenLec(true);
+  }, ready);
 
   const leche = useMemo(() => {
     if (!db) return [];

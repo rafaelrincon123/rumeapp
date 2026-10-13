@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Propietario } from "./types";
 import { getSupabase } from "./supabase";
 import { initDB, clearDB, getCachedDB } from "./db";
-import { findPropietarioForAuthUser, AUTH_EVENT_NAME } from "./auth";
+import { findPropietarioForAuthUser, AUTH_EVENT_NAME, entrarConEnlaceDeCorreo } from "./auth";
 
 interface State {
   hasSession: boolean;
@@ -77,7 +77,11 @@ export function useAuth(): State & { clearRecovery: () => void; refresh: () => P
     let mounted = true;
     const sb = getSupabase();
 
-    void refresh();
+    // Si llegó desde el botón de un correo, abrir la sesión antes del primer
+    // refresh (para no mostrar la landing un instante).
+    void entrarConEnlaceDeCorreo().finally(() => {
+      if (mounted) void refresh();
+    });
 
     const { data: sub } = sb.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {

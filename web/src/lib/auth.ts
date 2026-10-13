@@ -92,6 +92,24 @@ export async function verifySignupCode(
   return { ok: true };
 }
 
+/**
+ * Botón "Entrar" de los correos de seguimiento: la Edge Function `seguimiento`
+ * redirige a la app con `?acceso=<token_hash>` (un solo uso). Si viene, abre
+ * la sesión con él y lo quita de la URL. Devuelve si entró.
+ */
+export async function entrarConEnlaceDeCorreo(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  const url = new URL(window.location.href);
+  const tokenHash = url.searchParams.get("acceso");
+  if (!tokenHash) return false;
+  url.searchParams.delete("acceso");
+  window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+  const { error } = await getSupabase().auth.verifyOtp({ token_hash: tokenHash, type: "magiclink" });
+  if (error) return false; // vencido o ya usado: queda el login normal
+  try { track("EntroDesdeCorreo"); } catch { /* ignore */ }
+  return true;
+}
+
 /** Reenvía el correo de confirmación de registro (trae código y enlace). */
 export async function resendSignupEmail(
   email: string

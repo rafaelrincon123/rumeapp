@@ -1,0 +1,321 @@
+// Edge Function: seguimiento — correos automáticos para que los registros nuevos
+// terminen de entrar y vuelvan.
+//
+// POST (pg_cron, cada hora): manda, una sola vez por persona,
+//   · "falta_paso": cuentas de los últimos 14 días (con más de 2 h) que no
+//     pusieron el código del correo o que entraron pero no crearon su finca.
+//     El botón entra de una vez (confirma el correo y abre sesión).
+//   · "dia2": dueños de fincas creadas hace 20 h a 10 días que aún no han
+//     anotado ni pesajes ni leche: les muestra cómo llevar el peso y el ordeño.
+//     Solo de 6 a. m. a 7 p. m. (Colombia) y respetando la baja de correos.
+//   Body opcional para probar: { prueba: "falta_paso" | "dia2", user_id, a }
+//   → manda ese correo de ese usuario al correo `a`, sin registrar el envío.
+// GET ?u=<user_id>&e=<vence epoch s>&r=<ruta>&t=<firma>: botón de los correos.
+//   Confirma el correo si hacía falta, genera un enlace de un solo uso y
+//   redirige a rumea.app/<ruta>?acceso=<token_hash>; la app abre la sesión.
+//
+// --no-verify-jwt; auth del POST por header x-notify-secret.
+// Secrets: NOTIFY_SECRET, RESEND_API_KEY.
+
+import { createClient, User } from "https://esm.sh/@supabase/supabase-js@2";
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const NOTIFY_SECRET = Deno.env.get("NOTIFY_SECRET") ?? "";
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
+const FROM = "RumeApp <soporte@rumea.app>";
+const APP = "https://rumea.app";
+const URL_FUNCION = `${SUPABASE_URL}/functions/v1/seguimiento`;
+const URL_BAJA = `${SUPABASE_URL}/functions/v1/recordatorios`;
+const HORA = 3600 * 1000;
+const DIA = 24 * HORA;
+
+// Rutas a las que puede llevar el botón (la firma cubre la clave, no la URL).
+const RUTAS: Record<string, string> = {
+  inicio: "/",
+  animales: "/animales?nuevo=1",
+  peso: "/peso?nuevo=1",
+  leche: "/produccion?nuevo=1",
+};
+
+const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+  auth: { autoRefreshToken: false, persistSession: false },
+});
+
+function esc(s: unknown): string {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+async function firmar(texto: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw", new TextEncoder().encode(NOTIFY_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(texto));
+  return Array.from(new Uint8Array(sig)).slice(0, 16).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** Botón que entra directo a la app (vence en `dias`). */
+async function enlaceAcceso(userId: string, ruta: keyof typeof RUTAS, dias: number): Promise<string> {
+  const e = Math.floor((Date.now() + dias * DIA) / 1000);
+  const t = await firmar(`acceso:${userId}:${e}:${ruta}`);
+  return `${URL_FUNCION}?u=${userId}&e=${e}&r=${ruta}&t=${t}`;
+}
+
+/** Mismo enlace de baja que el correo "Hoy toca" (firma "baja:" + user_id). */
+async function enlaceBaja(userId: string): Promise<string> {
+  return `${URL_BAJA}?u=${userId}&t=${await firmar("baja:" + userId)}`;
+}
+
+function primerNombre(u: User): string {
+  const nombre = String((u.user_metadata as { nombre?: string })?.nombre ?? "").trim();
+  return nombre.split(/\s+/)[0] ?? "";
+}
+
+// ---------------------------------------------------------------- plantillas
+
+const BOTON = (href: string, texto: string) => `
+  <a href="${href}" style="display:inline-block;background:#B8CE7A;color:#14261A;font-weight:bold;font-size:16px;text-decoration:none;padding:15px 30px;border-radius:999px;text-transform:uppercase;letter-spacing:1px;">${texto}</a>`;
+
+const BOTON_SECUNDARIO = (href: string, texto: string) => `
+  <a href="${href}" style="display:inline-block;border:1px solid #B8CE7A;color:#B8CE7A;font-weight:bold;font-size:14px;text-decoration:none;padding:11px 22px;border-radius:999px;">${texto}</a>`;
+
+function marco(titulo: string, cuerpo: string, botones: string, pie: string): string {
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RumeApp</title></head>
+<body style="margin:0;padding:0;background:#0E1B12;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0E1B12;">
+  <tr><td align="center" style="padding:28px 12px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#14261A;border-radius:24px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;">
+      <tr><td style="padding:34px 32px 8px;">
+        <img src="https://rumea.app/logo.png" width="56" height="56" alt="RumeApp" style="display:block;border:0;">
+        <div style="margin-top:20px;display:inline-block;background:rgba(184,206,122,0.16);border:1px solid rgba(184,206,122,0.40);color:#B8CE7A;font-size:11px;letter-spacing:2px;text-transform:uppercase;padding:6px 12px;border-radius:999px;">RumeApp · Gestión ganadera</div>
+        <h1 style="margin:18px 0 0;color:#EFE8D8;font-size:28px;line-height:1.15;text-transform:uppercase;letter-spacing:-0.5px;">${esc(titulo)}</h1>
+      </td></tr>
+      <tr><td style="padding:18px 20px 8px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#22402A;border-radius:18px;">
+          <tr><td style="padding:26px 24px;color:#EFE8D8;font-size:16px;line-height:1.6;">${cuerpo}</td></tr>
+        </table>
+      </td></tr>
+      <tr><td align="center" style="padding:22px 32px 8px;">${botones}</td></tr>
+      <tr><td style="padding:22px 32px 32px;color:rgba(239,232,216,0.65);font-size:14px;line-height:1.5;">
+        El equipo de RumeApp<br><a href="https://rumea.app/" style="color:#B8CE7A;text-decoration:none;">rumea.app</a>
+      </td></tr>
+    </table>
+    <p style="max-width:560px;margin:16px auto 0;color:rgba(239,232,216,0.40);font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.5;text-align:center;">${pie}</p>
+  </td></tr>
+</table></body></html>`;
+}
+
+async function correoFaltaPaso(u: User): Promise<{ asunto: string; html: string }> {
+  const nombre = primerNombre(u);
+  const sinConfirmar = !u.email_confirmed_at;
+  const cuerpo = `
+    <p style="margin:0 0 14px;">Hola${nombre ? ", " + esc(nombre) : ""}:</p>
+    <p style="margin:0 0 14px;">${sinConfirmar
+      ? "Usted empezó a crear su cuenta en RumeApp, pero quedó faltando confirmar el correo."
+      : "Usted ya tiene su cuenta en RumeApp, pero quedó faltando crear su finca."}</p>
+    <p style="margin:0 0 14px;">Toque el botón y entra de una vez${sinConfirmar ? ", sin código" : ""}. Solo le va a pedir el nombre de su finca y queda lista para anotar sus animales, gastos y vacunas.</p>
+    <p style="margin:0;color:rgba(239,232,216,0.80);font-size:14px;">El plan gratis no vence y no pide tarjeta.</p>`;
+  return {
+    asunto: nombre ? `${nombre}, le falta un paso para entrar a RumeApp` : "Le falta un paso para entrar a RumeApp",
+    html: marco(
+      "Le falta un paso",
+      cuerpo,
+      BOTON(await enlaceAcceso(u.id, "inicio", 14), "Entrar a RumeApp →"),
+      "Recibe este correo porque se registró en RumeApp con esta dirección. Si no fue usted, ignórelo.",
+    ),
+  };
+}
+
+async function correoDia2(u: User, finca: string, animales: number): Promise<{ asunto: string; html: string }> {
+  const nombre = primerNombre(u);
+  const paso = (n: string, titulo: string, texto: string) => `
+    <tr><td valign="top" style="padding:8px 12px 8px 0;"><span style="display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;border-radius:13px;background:#B8CE7A;color:#14261A;font-weight:bold;font-size:13px;">${n}</span></td>
+        <td style="padding:8px 0;color:#EFE8D8;font-size:15px;line-height:1.5;"><b>${titulo}</b> ${texto}</td></tr>`;
+  const sinAnimales = animales === 0;
+  const cuerpo = `
+    <p style="margin:0 0 14px;">Hola${nombre ? ", " + esc(nombre) : ""}:</p>
+    <p style="margin:0 0 14px;">Con RumeApp puede llevar en el celular el peso y la leche de <b style="color:#B8CE7A;">${esc(finca)}</b>, sin cuaderno. Se anota en menos de un minuto:</p>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 14px;">
+      ${sinAnimales ? paso("✓", "Primero registre sus animales.", "Con el número o el nombre basta; lo demás se completa después.") : ""}
+      ${paso("1", "Peso:", "anote el peso de un animal (con báscula o con cinta). Desde el segundo pesaje, RumeApp le muestra cuántos gramos sube al día.")}
+      ${paso("2", "Leche:", "anote los litros de la mañana y de la tarde de cada vaca. RumeApp le suma el total del día y le arma la gráfica de la semana.")}
+    </table>
+    <p style="margin:0;color:rgba(239,232,216,0.80);font-size:14px;">Así sabe qué animales están rindiendo y cuáles no, con números y no de memoria.</p>`;
+  const botones = sinAnimales
+    ? BOTON(await enlaceAcceso(u.id, "animales", 7), "Registrar mis animales →")
+    : `${BOTON(await enlaceAcceso(u.id, "peso", 7), "Anotar un pesaje →")}
+       <div style="height:14px;line-height:14px;">&nbsp;</div>
+       ${BOTON_SECUNDARIO(await enlaceAcceso(u.id, "leche", 7), "Anotar el ordeño de hoy")}`;
+  return {
+    asunto: nombre ? `${nombre}, lleve el peso y la leche en RumeApp 🐄` : "Lleve el peso y la leche en RumeApp 🐄",
+    html: marco(
+      "El peso y la leche, en el celular",
+      cuerpo,
+      botones,
+      `Recibe este correo porque creó la finca ${esc(finca)} en RumeApp. <a href="${await enlaceBaja(u.id)}" style="color:rgba(239,232,216,0.55);">Dejar de recibir estos correos</a>.`,
+    ),
+  };
+}
+
+async function enviar(a: string, correo: { asunto: string; html: string }): Promise<boolean> {
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from: FROM, to: [a], reply_to: "soporte@rumea.app", subject: correo.asunto, html: correo.html }),
+  });
+  if (!res.ok) console.error("Resend rechazó el correo", a, res.status, await res.text());
+  return res.ok;
+}
+
+// ------------------------------------------------------------------- datos
+
+async function todosLosUsuarios(): Promise<User[]> {
+  const out: User[] = [];
+  for (let page = 1; ; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) throw error;
+    out.push(...data.users);
+    if (data.users.length < 1000) return out;
+  }
+}
+
+async function yaEnviados(tipo: string): Promise<Set<string>> {
+  const { data } = await admin.from("correos_seguimiento").select("user_id").eq("tipo", tipo);
+  return new Set((data ?? []).map((r) => r.user_id as string));
+}
+
+async function marcar(userId: string, tipo: string): Promise<boolean> {
+  // Se marca ANTES de mandar: si dos corridas se cruzan, solo una gana el insert.
+  const { error } = await admin.from("correos_seguimiento").insert({ user_id: userId, tipo });
+  return !error;
+}
+
+function horaBogota(): number {
+  return Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/Bogota", hour: "numeric", hourCycle: "h23" }).format(new Date()));
+}
+
+async function contar(tabla: string, fincaId: string): Promise<number> {
+  const { count } = await admin.from(tabla).select("id", { count: "exact", head: true }).eq("finca_id", fincaId);
+  return count ?? 0;
+}
+
+async function faltaPaso(usuarios: User[]): Promise<string[]> {
+  const ahora = Date.now();
+  const [{ data: duenos }, { data: miembros }, enviados] = await Promise.all([
+    admin.from("fincas").select("owner_user_id"),
+    admin.from("finca_miembros").select("user_id"),
+    yaEnviados("falta_paso"),
+  ]);
+  const conFinca = new Set([
+    ...(duenos ?? []).map((r) => r.owner_user_id as string),
+    ...(miembros ?? []).map((r) => r.user_id as string),
+  ]);
+  const enviadosA: string[] = [];
+  for (const u of usuarios) {
+    const edad = ahora - new Date(u.created_at).getTime();
+    if (edad < 2 * HORA || edad > 14 * DIA) continue;
+    if (!u.email || enviados.has(u.id) || conFinca.has(u.id)) continue;
+    if ((u as { banned_until?: string }).banned_until) continue;
+    if (!(await marcar(u.id, "falta_paso"))) continue;
+    if (await enviar(u.email, await correoFaltaPaso(u))) enviadosA.push(u.email);
+  }
+  return enviadosA;
+}
+
+async function dia2(usuarios: User[]): Promise<string[]> {
+  const ahora = Date.now();
+  const desde = new Date(ahora - 10 * DIA).toISOString();
+  const hasta = new Date(ahora - 20 * HORA).toISOString();
+  const [{ data: fincas }, { data: bajas }, enviados] = await Promise.all([
+    admin.from("fincas").select("id, nombre, owner_user_id").gte("created_at", desde).lte("created_at", hasta)
+      .order("created_at"),
+    admin.from("user_profiles").select("user_id").eq("recordatorios_correo", false),
+    yaEnviados("dia2"),
+  ]);
+  const deBaja = new Set((bajas ?? []).map((r) => r.user_id as string));
+  const porId = new Map(usuarios.map((u) => [u.id, u]));
+  const enviadosA: string[] = [];
+  for (const f of fincas ?? []) {
+    const u = porId.get(f.owner_user_id);
+    if (!u?.email || enviados.has(u.id) || deBaja.has(u.id)) continue;
+    const [animales, pesajes, leche] = await Promise.all([
+      contar("animales", f.id), contar("pesajes", f.id), contar("produccion_leche", f.id),
+    ]);
+    if (pesajes + leche > 0) continue; // ya lo usa: no hace falta
+    if (!(await marcar(u.id, "dia2"))) continue;
+    enviados.add(u.id); // un dueño con varias fincas nuevas recibe uno solo
+    if (await enviar(u.email, await correoDia2(u, f.nombre, animales))) enviadosA.push(u.email);
+  }
+  return enviadosA;
+}
+
+// ------------------------------------------------------------------ handler
+
+async function acceso(url: URL): Promise<Response> {
+  const u = url.searchParams.get("u") ?? "";
+  const e = Number(url.searchParams.get("e") ?? 0);
+  const r = url.searchParams.get("r") ?? "inicio";
+  const t = url.searchParams.get("t") ?? "";
+  const ir = (destino: string) => new Response(null, { status: 302, headers: { Location: destino } });
+
+  if (!RUTAS[r] || !e || e * 1000 < Date.now() || t !== (await firmar(`acceso:${u}:${e}:${r}`))) {
+    return ir(APP + "/"); // vencido o alterado: que entre con su clave
+  }
+  const { data, error } = await admin.auth.admin.getUserById(u);
+  const user = data?.user;
+  if (error || !user?.email) return ir(APP + "/");
+  if (!user.email_confirmed_at) {
+    // Tocar el botón del correo demuestra que el correo es suyo.
+    await admin.auth.admin.updateUserById(u, { email_confirm: true });
+  }
+  const { data: link, error: linkErr } = await admin.auth.admin.generateLink({ type: "magiclink", email: user.email });
+  const hash = link?.properties?.hashed_token;
+  if (linkErr || !hash) {
+    console.error("generateLink falló", linkErr);
+    return ir(APP + "/");
+  }
+  const destino = new URL(APP + RUTAS[r]);
+  destino.searchParams.set("acceso", hash);
+  return ir(destino.toString());
+}
+
+Deno.serve(async (req) => {
+  const url = new URL(req.url);
+  if (req.method === "GET") return acceso(url);
+  if (req.method !== "POST") return new Response("Método no permitido", { status: 405 });
+  if (!NOTIFY_SECRET || req.headers.get("x-notify-secret") !== NOTIFY_SECRET) {
+    return new Response("No autorizado", { status: 401 });
+  }
+  let body: { prueba?: string; user_id?: string; a?: string } = {};
+  try {
+    body = await req.json();
+  } catch { /* cron manda {} */ }
+
+  if (body.prueba) {
+    if (!body.user_id || !body.a) return new Response("Faltan user_id y a", { status: 400 });
+    const { data } = await admin.auth.admin.getUserById(body.user_id);
+    if (!data?.user) return new Response("Usuario no encontrado", { status: 404 });
+    let correo;
+    if (body.prueba === "falta_paso") {
+      correo = await correoFaltaPaso(data.user);
+    } else {
+      const { data: f } = await admin.from("fincas").select("id, nombre").eq("owner_user_id", body.user_id)
+        .order("created_at").limit(1).maybeSingle();
+      correo = await correoDia2(data.user, f?.nombre ?? "su finca", f ? await contar("animales", f.id) : 0);
+    }
+    const ok = await enviar(body.a, correo);
+    return Response.json({ ok }, { status: ok ? 200 : 502 });
+  }
+
+  const usuarios = await todosLosUsuarios();
+  const resumen = {
+    falta_paso: await faltaPaso(usuarios),
+    dia2: horaBogota() >= 6 && horaBogota() < 19 ? await dia2(usuarios) : "fuera de horario",
+  };
+  console.log("seguimiento", JSON.stringify(resumen));
+  return Response.json(resumen);
+});

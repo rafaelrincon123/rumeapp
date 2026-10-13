@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useDB } from "@/lib/useDB";
+import { useAbrirNuevo } from "@/lib/tutorial";
 import { updateCollection, uid, nowISO } from "@/lib/storage";
 import { fmtDate, fmtNumber, todayISO } from "@/lib/format";
 import { Pesaje, TipoPesaje } from "@/lib/types";
@@ -27,6 +28,13 @@ export default function PesoPage() {
   const [filtroTipo, setFiltroTipo] = useState<TipoPesaje | "">("");
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
+
+  // Desde el tutorial o el correo del día 2 (?nuevo=1): abrir el formulario.
+  useAbrirNuevo(() => {
+    setEdit(null);
+    setMode("edit");
+    setOpen(true);
+  }, ready);
 
   const pesajesOrdenados = useMemo(() => {
     if (!db) return [];
