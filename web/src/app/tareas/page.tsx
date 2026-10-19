@@ -20,6 +20,7 @@ import FormRow from "@/components/FormRow";
 import HeroStat from "@/components/HeroStat";
 import { IconCheck, IconAlert, IconHealth, IconRepro } from "@/components/icons";
 import ExportarPDFButton from "@/components/ExportarPDFButton";
+import { completarTareaPlan } from "@/lib/planSanitario";
 
 type UnifiedItem = {
   key: string;
@@ -194,6 +195,8 @@ export default function TareasPage() {
   function toggleTarea(item: UnifiedItem) {
     if (item.fuente === "manual" && item.tarea) {
       const t = item.tarea;
+      // Del plan sanitario: al marcarla hecha se programa la siguiente vez.
+      if (!t.completada && completarTareaPlan(t)) return;
       updateCollection("tareas", (list) =>
         list.map((x) =>
           x.id === t.id

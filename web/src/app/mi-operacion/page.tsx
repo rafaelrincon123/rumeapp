@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useDB } from "@/lib/useDB";
 import { useAuth } from "@/lib/useAuth";
 import { fmtDate, fmtCOP, fmtNumber, fmtPct, edadTexto, diasHasta } from "@/lib/format";
-import { CATEGORIAS_ANIMAL, CATEGORIAS_GASTO, TIPOS_SANIDAD } from "@/lib/types";
+import { CATEGORIAS_GASTO, TIPOS_SANIDAD } from "@/lib/types";
+import { categoriaDe } from "@/lib/especies";
 import { miParticipacion } from "@/lib/participacion";
 import { participantesGasto, cuotasPorPropietario } from "@/lib/gastos";
 import HeroStat from "@/components/HeroStat";
@@ -449,7 +450,7 @@ export default function MiOperacionPage() {
           ) : (
             <ul className="flex flex-col gap-1 -mx-1">
               {data.misAnimales.map((a) => {
-                const cat = CATEGORIAS_ANIMAL.find((c) => c.value === a.categoria);
+                const cat = categoriaDe(a);
                 return (
                   <li
                     key={a.id}
@@ -467,7 +468,7 @@ export default function MiOperacionPage() {
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-fg">{a.nombre ?? "—"}</div>
                       <div className="text-xs text-muted">
-                        {cat?.label} · {edadTexto(a.fechaNacimiento)}
+                        {cat} · {edadTexto(a.fechaNacimiento)}
                       </div>
                     </div>
                     <span

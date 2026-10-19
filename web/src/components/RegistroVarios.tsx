@@ -7,7 +7,7 @@ import { useFincaActiva } from "@/lib/useFincaActiva";
 import { updateCollection, uid, nowISO } from "@/lib/storage";
 import { PLAN_LIMITS, planEfectivo, planLabel } from "@/lib/plans";
 import OfertaPrueba from "./OfertaPrueba";
-import { Animal, CATEGORIAS_ANIMAL, CategoriaAnimal } from "@/lib/types";
+import { Animal, CategoriaAnimal, Especie } from "@/lib/types";
 import {
   EDADES,
   Guardado,
@@ -15,9 +15,12 @@ import {
   TIPOS_BASICO,
   chapetaSiguiente,
   edadMasCercana,
+  especieInicial,
   fechaDesdeEdad,
   siguienteNumero,
 } from "@/lib/animalesForm";
+import { ESPECIES, infoEspecie, nombreCategoria } from "@/lib/especies";
+import SelectorEspecie from "./SelectorEspecie";
 import { MAX_FOTOS, leerCuaderno } from "@/lib/leerCuaderno";
 import { track } from "@vercel/analytics";
 
@@ -49,12 +52,25 @@ function sinTildes(t: string): string {
   return t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 }
 
-/** "Novilla", "NOVILLAS", "ternero macho"… → categoría (o "" si no se reconoce). */
+// Palabras de cada categoría en todas las especies ("cabra joven", "potranca",
+// "búfala"…), de la más larga a la más corta: "cabra joven" gana a "cabra" y
+// "novilla" se revisa antes que "novillo".
+const PALABRAS_CATEGORIA: [string, CategoriaAnimal][] = [
+  ...(["novilla", "novillo", "ternera", "ternero", "vaca", "toro"] as CategoriaAnimal[]).map(
+    (c) => [c, c] as [string, CategoriaAnimal]
+  ),
+  ...ESPECIES.flatMap((e) =>
+    (Object.entries(e.categorias) as [CategoriaAnimal, string][]).map(
+      ([c, label]) => [sinTildes(label), c] as [string, CategoriaAnimal]
+    )
+  ),
+].sort((a, b) => b[0].length - a[0].length);
+
+/** "Novilla", "NOVILLAS", "ternero macho", "cabrita"… → categoría (o "" si no se reconoce). */
 function tipoDesdeTexto(t: string): CategoriaAnimal | "" {
   const x = sinTildes(t);
-  // El orden importa: "novilla" antes que "novillo", "ternera" antes que "ternero".
-  for (const c of ["novilla", "novillo", "ternera", "ternero", "vaca", "toro"] as CategoriaAnimal[]) {
-    if (x.includes(c)) return c;
+  for (const [palabra, c] of PALABRAS_CATEGORIA) {
+    if (x.includes(palabra)) return c;
   }
   return "";
 }
@@ -104,6 +120,9 @@ export default function RegistroVarios({
   const { db } = useDB();
   const { activa } = useFincaActiva();
   const [filas, setFilas] = useState<Fila[]>(() => [filaVacia()]);
+  // Una sola especie para toda la tanda.
+  const [especie, setEspecie] = useState<Especie>(() => especieInicial(db?.animales ?? []));
+  const info = infoEspecie(especie);
   const [error, setError] = useState<string | null>(null);
   // Se pasó del límite del plan: debajo del error va la oferta de prueba.
   const [lleno, setLleno] = useState(false);
@@ -257,6 +276,7 @@ export default function RegistroVarios({
       const categoria = f.categoria as CategoriaAnimal;
       return {
         id: uid(),
+        especie,
         nroIdentificacion: nro,
         nombre: f.nombre.trim(),
         sexo: SEXO_DE_CATEGORIA[categoria],
@@ -287,6 +307,11 @@ export default function RegistroVarios({
         Una fila por animal. Cada fila nueva copia la anterior y sigue el número de la chapeta: solo
         cambie lo que sea distinto. Sin chapeta, le ponemos un número.
       </p>
+
+      <div>
+        <div className="text-sm font-medium mb-1.5">¿De qué especie son?</div>
+        <SelectorEspecie value={especie} onChange={setEspecie} />
+      </div>
 
       <div className="rounded-xl p-3 flex flex-col sm:flex-row sm:items-center gap-3" style={{ background: "rgba(184, 206, 122, 0.22)" }}>
         <p className="text-sm flex-1">
@@ -374,7 +399,7 @@ export default function RegistroVarios({
               <option value="">¿Qué animal?</option>
               {TIPOS_BASICO.map((c) => (
                 <option key={c} value={c}>
-                  {CATEGORIAS_ANIMAL.find((x) => x.value === c)?.label ?? c}
+                  {nombreCategoria(c, especie)}
                 </option>
               ))}
             </select>
@@ -392,6 +417,7 @@ export default function RegistroVarios({
               value={f.raza}
               onChange={(e) => cambiar(f.id, { raza: e.target.value })}
               placeholder="Raza"
+              list={`razas-varios-${especie}`}
               aria-label={`Raza, fila ${i + 1}`}
               className="col-span-2 md:col-span-1"
             />
@@ -406,6 +432,11 @@ export default function RegistroVarios({
           </li>
         ))}
       </ol>
+      <datalist id={`razas-varios-${especie}`}>
+        {info.razas.map((r) => (
+          <option key={r} value={r} />
+        ))}
+      </datalist>
 
       <div className="flex flex-wrap gap-2">
         <button type="button" className="btn" onClick={() => agregar(1)}>

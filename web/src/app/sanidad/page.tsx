@@ -10,13 +10,18 @@ import Modal from "@/components/Modal";
 import FormRow from "@/components/FormRow";
 import { IconCheck } from "@/components/icons";
 import ExportarPDFButton from "@/components/ExportarPDFButton";
+import PlanSanitario from "@/components/PlanSanitario";
 
 export default function SanidadPage() {
   const { db, ready } = useDB();
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<SanidadEvento | null>(null);
   const [mode, setMode] = useState<"view" | "edit">("view");
-  const [tab, setTab] = useState<"historial" | "proximos">("historial");
+  const [tab, setTab] = useState<"historial" | "proximos" | "plan">("historial");
+  // /sanidad?plan=1 (desde el inicio o la felicitación) abre el plan sanitario.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("plan") === "1") setTab("plan");
+  }, []);
   const [q, setQ] = useState("");
   const [filtroAnimal, setFiltroAnimal] = useState("");
   const [filtroTipo, setFiltroTipo] = useState<TipoSanidad | "">("");
@@ -95,7 +100,13 @@ export default function SanidadPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <button
+            className={"btn " + (tab === "plan" ? "btn-primary" : "btn-ghost")}
+            onClick={() => setTab("plan")}
+          >
+            🩺 Plan sanitario
+          </button>
           <button
             className={"btn " + (tab === "proximos" ? "btn-primary" : "btn-ghost")}
             onClick={() => setTab("proximos")}
@@ -139,6 +150,9 @@ export default function SanidadPage() {
         </div>
       </div>
 
+      {tab === "plan" && <PlanSanitario />}
+
+      {tab !== "plan" && (
       <div className="card card-tight">
         <div className="grid grid-cols-1 md:grid-cols-6 gap-2 items-end">
           <div className="md:col-span-2">
@@ -198,6 +212,7 @@ export default function SanidadPage() {
           </div>
         )}
       </div>
+      )}
 
       {tab === "proximos" && (
         <div className="card p-0 overflow-x-auto">

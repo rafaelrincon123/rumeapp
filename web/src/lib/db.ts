@@ -41,6 +41,7 @@ const TABLE_DEFS: Record<keyof DBState, TableDef> = {
     table: "animales",
     map: {
       id: "id",
+      especie: "especie",
       nroIdentificacion: "nro_identificacion",
       nombre: "nombre",
       sexo: "sexo",
@@ -183,6 +184,7 @@ const TABLE_DEFS: Record<keyof DBState, TableDef> = {
       potreroId: "potrero_id",
       asignadoAId: "asignado_a_id",
       asignadoAIds: "asignado_a_ids",
+      origen: "origen",
       createdAt: "created_at",
     },
   },

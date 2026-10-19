@@ -13,6 +13,7 @@ import {
 import { PrimerosPasos, RecorridoBienvenida } from "@/components/Tutorial";
 import { AvisoPrueba } from "@/components/OfertaPrueba";
 import { RecordatorioFundador } from "@/components/OfertaFundador";
+import { InvitacionPlanSanitario } from "@/components/PlanSanitario";
 
 type TileTone = "forest" | "copper" | "moss" | "citrus";
 
@@ -118,6 +119,7 @@ export default function Home() {
       <RecordatorioFundador />
       <AvisoPrueba />
       <PrimerosPasos />
+      <InvitacionPlanSanitario />
       <div className="grid grid-cols-2 gap-3 md:gap-5 max-w-3xl mx-auto">
         {tiles.map((t) => (
           <TileCard key={t.href} tile={t} />

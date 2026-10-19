@@ -26,9 +26,14 @@ import {
   Guardado,
   PlantillaAnimal,
   chapetaSiguiente,
+  especieInicial,
   fechaDesdeEdad,
   siguienteNumero,
 } from "@/lib/animalesForm";
+import { ESPECIES, categoriaDe, especieDe, especiesPresentes, infoEspecie, nombreCategoria } from "@/lib/especies";
+import SelectorEspecie from "@/components/SelectorEspecie";
+import { planActivo } from "@/lib/planSanitario";
+import type { Especie } from "@/lib/types";
 import FormRow from "@/components/FormRow";
 import PhotoInput from "@/components/PhotoInput";
 import HeroStat from "@/components/HeroStat";
@@ -48,6 +53,7 @@ export default function AnimalesPage() {
   const { db, ready } = useDB();
   const [q, setQ] = useState("");
   const [filtroCat, setFiltroCat] = useState<CategoriaAnimal | "">("");
+  const [filtroEspecie, setFiltroEspecie] = useState<Especie | "">("");
   const [filtroEstado, setFiltroEstado] = useState<EstadoAnimal | "">("activo");
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<Animal | null>(null);
@@ -94,6 +100,7 @@ export default function AnimalesPage() {
     const term = q.trim().toLowerCase();
     return db.animales
       .filter((a) => (filtroEstado ? a.estado === filtroEstado : true))
+      .filter((a) => (filtroEspecie ? especieDe(a) === filtroEspecie : true))
       .filter((a) => (filtroCat ? a.categoria === filtroCat : true))
       .filter((a) =>
         term
@@ -103,11 +110,18 @@ export default function AnimalesPage() {
           : true
       )
       .sort((a, b) => a.nroIdentificacion.localeCompare(b.nroIdentificacion));
-  }, [db, q, filtroCat, filtroEstado]);
+  }, [db, q, filtroCat, filtroEspecie, filtroEstado]);
+
+  // Con una sola especie en el hato se habla de "vacas"; con varias, de
+  // hembras adultas, y aparece el filtro por especie.
+  const presentes = useMemo(() => especiesPresentes(db?.animales ?? []), [db]);
+  const unaEspecie = presentes.length <= 1 ? presentes[0] ?? "bovino" : null;
 
   const stats = useMemo(() => {
     if (!db) return null;
-    const activos = db.animales.filter((a) => a.estado === "activo");
+    const activos = db.animales
+      .filter((a) => a.estado === "activo")
+      .filter((a) => (filtroEspecie ? especieDe(a) === filtroEspecie : true));
     const vacas = activos.filter((a) => a.categoria === "vaca").length;
     const crias = activos.filter(
       (a) => a.categoria === "ternero" || a.categoria === "ternera"
@@ -116,7 +130,12 @@ export default function AnimalesPage() {
       (a) => a.categoria === "toro" || a.categoria === "novillo"
     ).length;
     return { total: activos.length, vacas, crias, machos };
-  }, [db]);
+  }, [db, filtroEspecie]);
+
+  const especieStats = filtroEspecie || unaEspecie;
+  const labelHembras = especieStats
+    ? `${nombreCategoria("vaca", especieStats)}s`.replace(/ss$/, "s")
+    : "Hembras adultas";
 
   if (!ready || !stats) return <div className="text-muted">Cargando…</div>;
 
@@ -124,7 +143,7 @@ export default function AnimalesPage() {
     <div className="space-y-4">
       <section className="grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-3">
         <HeroStat label="Total activos" value={stats.total} tone="forest" />
-        <HeroStat label="Vacas" value={stats.vacas} tone="moss" />
+        <HeroStat label={labelHembras} value={stats.vacas} tone="moss" />
         <HeroStat label="Crías" value={stats.crias} tone="citrus" />
         <HeroStat label="Machos" value={stats.machos} tone="copper" />
       </section>
@@ -141,6 +160,20 @@ export default function AnimalesPage() {
             onChange={(e) => setQ(e.target.value)}
             className="w-full md:w-72"
           />
+          {presentes.length > 1 && (
+            <select
+              value={filtroEspecie}
+              onChange={(e) => setFiltroEspecie(e.target.value as Especie | "")}
+              className="w-auto"
+            >
+              <option value="">Todas las especies</option>
+              {ESPECIES.filter((e) => presentes.includes(e.value)).map((e) => (
+                <option key={e.value} value={e.value}>
+                  {e.emoji} {e.plural}
+                </option>
+              ))}
+            </select>
+          )}
           <select
             value={filtroCat}
             onChange={(e) => setFiltroCat(e.target.value as CategoriaAnimal | "")}
@@ -149,7 +182,7 @@ export default function AnimalesPage() {
             <option value="">Todas categorías</option>
             {CATEGORIAS_ANIMAL.map((c) => (
               <option key={c.value} value={c.value}>
-                {c.label}
+                {especieStats ? nombreCategoria(c.value, especieStats) : c.label}
               </option>
             ))}
           </select>
@@ -175,7 +208,7 @@ export default function AnimalesPage() {
               { header: "Nombre", value: (a: Animal) => a.nombre ?? "—" },
               { header: "Sexo", value: (a: Animal) => (a.sexo === "hembra" ? "Hembra" : "Macho") },
               { header: "Raza", value: (a: Animal) => a.raza },
-              { header: "Categoría", value: (a: Animal) => CATEGORIAS_ANIMAL.find((c) => c.value === a.categoria)?.label ?? a.categoria },
+              { header: "Categoría", value: (a: Animal) => categoriaDe(a) },
               { header: "Edad", value: (a: Animal) => edadTexto(a.fechaNacimiento) },
               { header: "Estado", value: (a: Animal) => ESTADOS.find((e) => e.value === a.estado)?.label ?? a.estado },
               { header: "Potrero", value: (a: Animal) => db?.potreros.find((p) => p.id === a.potreroId)?.nombre ?? "—" },
@@ -235,7 +268,7 @@ export default function AnimalesPage() {
                     <td>{a.sexo === "hembra" ? "♀" : "♂"}</td>
                     <td>
                       <span className="chip">
-                        {CATEGORIAS_ANIMAL.find((c) => c.value === a.categoria)?.label}
+                        {categoriaDe(a)}
                       </span>
                     </td>
                     <td className="text-muted">
@@ -333,7 +366,7 @@ export default function AnimalesPage() {
                     </span>
                   </div>
                   <div className="text-xs text-muted mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5">
-                    <span>{CATEGORIAS_ANIMAL.find((c) => c.value === a.categoria)?.label}</span>
+                    <span>{categoriaDe(a)}</span>
                     <span>·</span>
                     <span>{edadTexto(a.fechaNacimiento)}{a.fechaNacimientoAprox ? " ~" : ""}</span>
                     {potrero && (
@@ -456,7 +489,7 @@ function AnimalDetail({
     ? `#${padre.nroIdentificacion} ${padre.nombre ?? ""}`
     : animal.padreNombre;
 
-  const categoria = CATEGORIAS_ANIMAL.find((c) => c.value === animal.categoria);
+  const categoria = categoriaDe(animal);
 
   const sanidad = db.sanidad
     .filter((s) => s.animalId === animal.id)
@@ -518,7 +551,9 @@ function AnimalDetail({
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-2">
-            <span className="chip primary">{categoria?.label}</span>
+            <span className="chip primary">
+              {infoEspecie(animal.especie).emoji} {categoria}
+            </span>
             <span className="chip">{animal.sexo === "hembra" ? "♀ Hembra" : "♂ Macho"}</span>
             <span
               className={"chip " + (animal.estado === "activo" ? "success" : "danger")}
@@ -688,7 +723,7 @@ function AnimalDetail({
                 style={{ fontSize: "0.68rem", padding: "0.2rem 0.6rem" }}
               >
                 #{h.nroIdentificacion} {h.nombre ?? ""} ·{" "}
-                {CATEGORIAS_ANIMAL.find((c) => c.value === h.categoria)?.label}
+                {categoriaDe(h)}
               </li>
             ))}
           </ul>
@@ -866,6 +901,7 @@ function AnimalForm({
   const [form, setForm] = useState<Animal>(
     initial ?? {
       id: uid(),
+      especie: especieInicial(db?.animales ?? []),
       nroIdentificacion: plantilla?.chapeta ?? "",
       nombre: "",
       sexo: "hembra",
@@ -882,6 +918,15 @@ function AnimalForm({
   function setCategoria(categoria: CategoriaAnimal) {
     setForm({ ...form, categoria, sexo: SEXO_DE_CATEGORIA[categoria] });
   }
+
+  const especie = especieDe(form);
+  const info = infoEspecie(especie);
+  const campoEspecie = (
+    <div className="md:col-span-2">
+      <div className="text-sm font-medium mb-1.5">¿Qué especie es?</div>
+      <SelectorEspecie value={especie} onChange={(e) => setForm({ ...form, especie: e })} />
+    </div>
+  );
 
   function setEdad(valor: string) {
     setEdadMeses(valor);
@@ -945,6 +990,7 @@ function AnimalForm({
             modo: "uno",
             plantilla: {
               datos: {
+                especie: animal.especie,
                 categoria: animal.categoria,
                 sexo: animal.sexo,
                 raza: animal.raza,
@@ -995,8 +1041,14 @@ function AnimalForm({
       <input
         value={form.raza}
         onChange={(e) => setForm({ ...form, raza: e.target.value })}
-        placeholder="Ej. Gyr Holstein"
+        placeholder={info.ejemploRaza}
+        list={`razas-${especie}`}
       />
+      <datalist id={`razas-${especie}`}>
+        {info.razas.map((r) => (
+          <option key={r} value={r} />
+        ))}
+      </datalist>
     </FormRow>
   );
   const campoEdad = (
@@ -1034,6 +1086,7 @@ function AnimalForm({
             ¿Tiene varios animales o un cuaderno? Cárguelos todos de una vez, incluso con una foto →
           </button>
         )}
+        {campoEspecie}
         {campoChapeta}
         {campoNombre}
         <FormRow label="¿Qué animal es?" required>
@@ -1043,7 +1096,7 @@ function AnimalForm({
           >
             {TIPOS_BASICO.map((c) => (
               <option key={c} value={c}>
-                {CATEGORIAS_ANIMAL.find((x) => x.value === c)?.label ?? c}
+                {nombreCategoria(c, especie)}
               </option>
             ))}
           </select>
@@ -1074,6 +1127,7 @@ function AnimalForm({
 
   return (
     <form onSubmit={save} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {campoEspecie}
       {campoChapeta}
       {campoNombre}
       <FormRow label="Categoría" required>
@@ -1082,7 +1136,7 @@ function AnimalForm({
           onChange={(e) => setCategoria(e.target.value as CategoriaAnimal)}
         >
           {CATEGORIAS_ANIMAL.map((c) => (
-            <option key={c.value} value={c.value}>{c.label}</option>
+            <option key={c.value} value={c.value}>{nombreCategoria(c.value, especie)}</option>
           ))}
         </select>
       </FormRow>
@@ -1325,6 +1379,19 @@ function Felicitacion({
         },
   ];
   if (lleno) opciones.splice(1, 1);
+  // Sin plan sanitario para esta especie: lo primero que se sugiere es
+  // activarlo (le llegan los recordatorios de purgas, baños y vacunas).
+  const especieAnimal = especieDe(animal);
+  if (db && !planActivo(db, especieAnimal)) {
+    opciones[0].sugerida = false;
+    opciones.unshift({
+      Icon: IconHealth,
+      titulo: `Activar el plan sanitario de sus ${infoEspecie(especieAnimal).plural.toLowerCase()}`,
+      sub: "Le recordamos purgas, baños y vacunas en la fecha que toca",
+      accion: () => router.push("/sanidad?plan=1"),
+      sugerida: true,
+    });
+  }
   if (modo === "uno" && !lleno) {
     opciones.push({
       Icon: IconCow,

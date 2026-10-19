@@ -1,5 +1,5 @@
 import { ymdLocal } from "./format";
-import type { Animal, CategoriaAnimal, Sexo } from "./types";
+import type { Animal, CategoriaAnimal, Especie, Sexo } from "./types";
 
 // Ayudas compartidas por el formulario de un animal y el registro de varios.
 
@@ -57,6 +57,12 @@ export function chapetaSiguiente(anterior: string, usadas: Set<string>): string 
   return c;
 }
 
+/** Especie con la que arranca un formulario nuevo: la del último animal registrado. */
+export function especieInicial(animales: Pick<Animal, "especie" | "createdAt">[]): Especie {
+  const ultimo = [...animales].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0];
+  return ultimo?.especie ?? "bovino";
+}
+
 /** Edad en meses → la opción más cercana de EDADES (para las listas). */
 export function edadMasCercana(meses: number): number {
   return EDADES.reduce((best, e) => (Math.abs(e.meses - meses) < Math.abs(best - meses) ? e.meses : best), EDADES[0].meses);
@@ -64,7 +70,7 @@ export function edadMasCercana(meses: number): number {
 
 /** Datos que "Registrar otro" copia del animal anterior. */
 export interface PlantillaAnimal {
-  datos: Pick<Animal, "categoria" | "sexo" | "raza" | "fechaNacimiento" | "fechaNacimientoAprox" | "potreroId" | "propietarioId">;
+  datos: Pick<Animal, "especie" | "categoria" | "sexo" | "raza" | "fechaNacimiento" | "fechaNacimientoAprox" | "potreroId" | "propietarioId">;
   edadMeses: string;
   chapeta: string;
 }

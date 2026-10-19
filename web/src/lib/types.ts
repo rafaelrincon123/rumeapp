@@ -8,8 +8,12 @@ export type CategoriaAnimal =
   | "vaca"
   | "toro";
 
+/** Especie del animal. Sin valor = bovino (animales de antes de las especies). */
+export type Especie = "bovino" | "bufalino" | "caprino" | "ovino" | "equino";
+
 export interface Animal {
   id: string;
+  especie?: Especie;
   nroIdentificacion: string;
   nombre?: string;
   sexo: Sexo;
@@ -232,6 +236,8 @@ export interface Tarea {
   /** @deprecated usar asignadoAIds */
   asignadoAId?: string;
   asignadoAIds?: string[];
+  /** "plan:<especie>:<item>" si la creó el plan sanitario. */
+  origen?: string;
   createdAt: string;
 }
 

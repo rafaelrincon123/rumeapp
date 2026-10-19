@@ -16,6 +16,7 @@ import Modal from "@/components/Modal";
 import FormRow from "@/components/FormRow";
 import { IconCheck } from "@/components/icons";
 import ExportarPDFButton from "@/components/ExportarPDFButton";
+import { especieDe, infoEspecie } from "@/lib/especies";
 
 export default function ReproduccionPage() {
   const { db, ready } = useDB();
@@ -347,7 +348,7 @@ export default function ReproduccionPage() {
               <tr>
                 <th>Fecha</th>
                 <th>Madre</th>
-                <th>Ternero</th>
+                <th>Cría</th>
                 <th>Sexo</th>
                 <th>Peso al nacer</th>
                 <th>Notas</th>
@@ -541,12 +542,14 @@ function ServicioForm({
     e.preventDefault();
     if (!form.hembraId) return alert("Selecciona la hembra");
     if (!form.machoIdOReferencia.trim()) return alert("Indica el macho o el semen usado");
-    // Calcular fecha probable de parto (~283 días desde el servicio) si no está seteada y quedó preñada
+    // Fecha probable de parto según la gestación de la especie (vaca ~283 días,
+    // cabra ~150, yegua ~340…) si no está puesta y quedó preñada.
     const payload = { ...form };
     if (payload.resultado === "prenada" && !payload.fechaProbableParto) {
       const base = parseDateLocal(payload.fechaServicio);
+      const hembra = db?.animales.find((a) => a.id === payload.hembraId);
       if (base) {
-        base.setDate(base.getDate() + 283);
+        base.setDate(base.getDate() + infoEspecie(hembra?.especie).gestacionDias);
         payload.fechaProbableParto = ymdLocal(base);
       }
     }
@@ -738,10 +741,11 @@ function PartoForm({
     const payload = { ...form };
 
     if (crearTernero && !initial) {
-      if (!nroTernero.trim()) return alert("Ingresa el número del ternero");
+      if (!nroTernero.trim()) return alert("Escriba el número de la cría");
       const madre = db!.animales.find((a) => a.id === form.madreId);
       const nuevoAnimal = {
         id: uid(),
+        especie: madre ? especieDe(madre) : undefined,
         nroIdentificacion: nroTernero,
         nombre: nombreTernero || undefined,
         sexo: (payload.sexoTernero ?? "hembra") as Sexo,
@@ -781,7 +785,7 @@ function PartoForm({
 
   function remove() {
     if (!initial) return;
-    if (!confirm("¿Eliminar este parto? (No borra al ternero)")) return;
+    if (!confirm("¿Eliminar este parto? (No borra la ficha de la cría)")) return;
     updateCollection("partos", (list) => list.filter((p) => p.id !== initial.id));
     onSaved();
   }
@@ -811,7 +815,7 @@ function PartoForm({
           onChange={(e) => setForm({ ...form, fecha: e.target.value })}
         />
       </FormRow>
-      <FormRow label="Sexo del ternero">
+      <FormRow label="Sexo de la cría">
         <select
           value={form.sexoTernero ?? ""}
           onChange={(e) => setForm({ ...form, sexoTernero: (e.target.value || undefined) as Sexo | undefined })}
@@ -839,7 +843,7 @@ function PartoForm({
       </FormRow>
       {!initial && (
         <>
-          <FormRow label="¿Crear ficha del ternero?" colspan={2}>
+          <FormRow label="¿Crear la ficha de la cría?" colspan={2}>
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -852,14 +856,14 @@ function PartoForm({
           </FormRow>
           {crearTernero && (
             <>
-              <FormRow label="Nº identificación ternero" required>
+              <FormRow label="Nº de chapeta de la cría" required>
                 <input
                   value={nroTernero}
                   onChange={(e) => setNroTernero(e.target.value)}
                   placeholder="011"
                 />
               </FormRow>
-              <FormRow label="Nombre ternero">
+              <FormRow label="Nombre de la cría">
                 <input
                   value={nombreTernero}
                   onChange={(e) => setNombreTernero(e.target.value)}
