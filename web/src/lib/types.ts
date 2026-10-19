@@ -9,7 +9,7 @@ export type CategoriaAnimal =
   | "toro";
 
 /** Especie del animal. Sin valor = bovino (animales de antes de las especies). */
-export type Especie = "bovino" | "bufalino" | "caprino" | "ovino" | "equino";
+export type Especie = "bovino" | "bufalino" | "caprino" | "ovino" | "equino" | "porcino";
 
 export interface Animal {
   id: string;
@@ -89,6 +89,9 @@ export interface Parto {
   terneroId?: string; // referencia al animal creado
   pesoTerneroKg?: number;
   sexoTernero?: Sexo;
+  /** Camada (cerdas, cabras, ovejas): crías nacidas vivas y muertas. */
+  nacidosVivos?: number;
+  nacidosMuertos?: number;
   complicaciones?: string;
   notas?: string;
   createdAt: string;
@@ -287,6 +290,52 @@ export interface MovimientoInsumo {
   createdAt: string;
 }
 
+/** Especies que se manejan por grupo: aves y cerdos de levante/ceba. */
+export type EspecieLote = "aviar" | "porcino";
+export type SistemaLote = "ponedoras" | "engorde" | "campo" | "levante_ceba";
+export type EstadoLote = "activo" | "cerrado";
+
+export interface Lote {
+  id: string;
+  especie: EspecieLote;
+  sistema: SistemaLote;
+  nombre: string;
+  fechaIngreso: string;
+  cantidadInicial: number;
+  /** Edad que traían al entrar (pollitas de 1 día = 1, lechones de 60 días…). */
+  edadIngresoDias: number;
+  raza?: string;
+  /** Galpón, corral o caseta. */
+  ubicacion?: string;
+  pesoIngresoKg?: number;
+  estado: EstadoLote;
+  fechaCierre?: string;
+  notas?: string;
+  createdAt: string;
+}
+
+export type TipoRegistroLote =
+  | "huevos"
+  | "mortalidad"
+  | "alimento"
+  | "peso"
+  | "venta"
+  | "venta_huevos"
+  | "otro";
+
+export interface RegistroLote {
+  id: string;
+  loteId: string;
+  fecha: string;
+  tipo: TipoRegistroLote;
+  /** huevos: unidades · mortalidad y venta: animales · alimento: kg · peso: kg promedio · venta_huevos: huevos. */
+  cantidad: number;
+  /** Plata: costo del alimento o valor de la venta. */
+  valor?: number;
+  notas?: string;
+  createdAt: string;
+}
+
 export interface DBState {
   animales: Animal[];
   potreros: Potrero[];
@@ -301,6 +350,8 @@ export interface DBState {
   tareas: Tarea[];
   insumos: Insumo[];
   movimientosInsumo: MovimientoInsumo[];
+  lotes: Lote[];
+  registrosLote: RegistroLote[];
 }
 
 export const CATEGORIAS_GASTO: { value: CategoriaGasto; label: string }[] = [

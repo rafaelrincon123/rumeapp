@@ -3,7 +3,7 @@
 import { ESPECIES } from "@/lib/especies";
 import type { Especie } from "@/lib/types";
 
-/** Botones grandes con la especie (🐄 🐃 🐐 🐑 🐴): se escoge a un toque. */
+/** Botones grandes con la especie (🐄 🐃 🐐 🐑 🐴 🐖): se escoge a un toque. */
 export default function SelectorEspecie({
   value,
   onChange,
@@ -12,7 +12,7 @@ export default function SelectorEspecie({
   onChange: (e: Especie) => void;
 }) {
   return (
-    <div className="grid grid-cols-5 gap-1.5" role="radiogroup" aria-label="Especie">
+    <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5" role="radiogroup" aria-label="Especie">
       {ESPECIES.map((e) => {
         const activo = e.value === value;
         return (

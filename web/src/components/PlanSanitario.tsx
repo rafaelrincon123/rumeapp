@@ -4,19 +4,22 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useDB } from "@/lib/useDB";
 import { diasHasta, fmtDate } from "@/lib/format";
-import { especiesPresentes, infoEspecie } from "@/lib/especies";
 import {
+  GrupoPlan,
   ItemPlan,
   PLANES,
   activarPlan,
   animalesDelItem,
   completarTareaPlan,
+  gruposPresentes,
+  infoGrupo,
   pendienteDe,
   planActivo,
   primeraFecha,
   quitarItem,
 } from "@/lib/planSanitario";
-import type { DBState, Especie } from "@/lib/types";
+import { especieDe } from "@/lib/especies";
+import type { DBState } from "@/lib/types";
 import { track } from "@vercel/analytics";
 
 function frecuencia(item: ItemPlan): string {
@@ -51,7 +54,7 @@ function medir(evento: string, datos: Record<string, string | number>) {
 /** Plan sanitario por especie: activar, marcar hecho y quitar cuidados. */
 export default function PlanSanitario() {
   const { db, ready } = useDB();
-  const presentes = useMemo(() => especiesPresentes(db?.animales ?? []), [db]);
+  const presentes = useMemo(() => (db ? gruposPresentes(db) : []), [db]);
 
   if (!ready || !db) return <div className="text-muted">Cargando…</div>;
 
@@ -63,9 +66,14 @@ export default function PlanSanitario() {
           Registre sus animales y aquí le armamos un plan sanitario: le avisamos cuándo toca purgar,
           bañar, vacunar y revisar.
         </p>
-        <Link href="/animales?nuevo=1" className="btn btn-primary">
-          + Registrar animales
-        </Link>
+        <div className="flex flex-wrap justify-center gap-2">
+          <Link href="/animales?nuevo=1" className="btn btn-primary">
+            + Registrar animales
+          </Link>
+          <Link href="/lotes?nuevo=1" className="btn">
+            🐔 Aves o cerdos por lote
+          </Link>
+        </div>
       </div>
     );
   }
@@ -84,13 +92,18 @@ export default function PlanSanitario() {
   );
 }
 
-function PlanEspecie({ db, especie }: { db: DBState; especie: Especie }) {
-  const info = infoEspecie(especie);
+function PlanEspecie({ db, especie }: { db: DBState; especie: GrupoPlan }) {
+  const info = infoGrupo(especie);
   const items = PLANES[especie];
   const activo = planActivo(db, especie);
-  const total = db.animales.filter(
-    (a) => a.estado === "activo" && (a.especie ?? "bovino") === especie
-  ).length;
+  const total = db.animales.filter((a) => a.estado === "activo" && especieDe(a) === especie).length;
+  const lotes = db.lotes.filter((l) => l.estado === "activo" && l.especie === especie).length;
+  const resumen = [
+    total ? `${total} animal${total === 1 ? "" : "es"} activo${total === 1 ? "" : "s"}` : "",
+    lotes ? `${lotes} lote${lotes === 1 ? "" : "s"}` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const [escogidos, setEscogidos] = useState<string[]>(() => items.map((i) => i.id));
   const [haciendo, setHaciendo] = useState<string | null>(null);
   const [anotar, setAnotar] = useState(true);
@@ -122,9 +135,7 @@ function PlanEspecie({ db, especie }: { db: DBState; especie: Especie }) {
         </span>
         <div className="flex-1 min-w-0">
           <h2 className="font-semibold tracking-tight">Plan sanitario · {info.plural}</h2>
-          <p className="text-xs text-muted">
-            {total} animal{total === 1 ? "" : "es"} activo{total === 1 ? "" : "s"}
-          </p>
+          <p className="text-xs text-muted">{resumen}</p>
         </div>
         {activo && <span className="chip success">Activo</span>}
       </header>
@@ -270,9 +281,9 @@ function PlanEspecie({ db, especie }: { db: DBState; especie: Especie }) {
 export function InvitacionPlanSanitario() {
   const { db, ready, loaded } = useDB();
   if (!ready || !db || !loaded("animales") || !loaded("tareas")) return null;
-  const sinPlan = especiesPresentes(db.animales).filter((e) => !planActivo(db, e));
+  const sinPlan = gruposPresentes(db).filter((e) => !planActivo(db, e));
   if (sinPlan.length === 0) return null;
-  const nombres = sinPlan.map((e) => infoEspecie(e).plural.toLowerCase()).join(" y ");
+  const nombres = sinPlan.map((e) => infoGrupo(e).plural.toLowerCase()).join(" y ");
   return (
     <Link
       href="/sanidad?plan=1"

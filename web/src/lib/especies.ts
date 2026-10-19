@@ -106,6 +106,24 @@ export const ESPECIES: InfoEspecie[] = [
     razas: ["Criollo colombiano", "Cuarto de milla", "Árabe", "Percherón", "Mular", "Asnal", "Cruce"],
     ejemploRaza: "Ej. Criollo colombiano",
   },
+  {
+    // Cerdos de cría, uno por uno. Los de levante y ceba van por lotes (/lotes).
+    value: "porcino",
+    plural: "Cerdos",
+    singular: "cerdo",
+    emoji: "🐖",
+    categorias: {
+      ternero: "Lechón",
+      ternera: "Lechona",
+      novillo: "Cerdo joven",
+      novilla: "Primeriza",
+      vaca: "Cerda",
+      toro: "Verraco",
+    },
+    gestacionDias: 114,
+    razas: ["Landrace", "Large White", "Duroc", "Pietrain", "Hampshire", "Zungo", "San Pedreño", "Cruce comercial"],
+    ejemploRaza: "Ej. Landrace × Large White",
+  },
 ];
 
 export const ESPECIE_POR_DEFECTO: Especie = "bovino";

@@ -56,7 +56,15 @@ export const IconRepro = ({ className, size, strokeWidth }: Props) => (
   </svg>
 );
 
-export const IconMilk = ({ className, size, strokeWidth }: Props) => (
+/** Lotes de aves y cerdos: un huevo con su línea de postura. */
+export const IconLote = ({ className, size, strokeWidth }: Props) => (
+  <svg {...base(size, strokeWidth)} className={className}>
+    <path d="M12 3c3.5 0 6.5 5 6.5 10a6.5 6.5 0 0 1-13 0C5.5 8 8.5 3 12 3z" />
+    <path d="M8.5 14.5c1.2 1 2.2 1.4 3.5 1.4s2.3-.4 3.5-1.4" />
+  </svg>
+);
+
+export const IconMilk =({ className, size, strokeWidth }: Props) => (
   <svg {...base(size, strokeWidth)} className={className}>
     <path d="M9 3h6l-1 3c1.5.6 2.5 2 2.5 3.7V19a2 2 0 0 1-2 2h-5a2 2 0 0 1-2-2V9.7c0-1.7 1-3.1 2.5-3.7z" />
     <path d="M9 12h6" />

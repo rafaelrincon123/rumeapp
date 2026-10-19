@@ -1,6 +1,6 @@
 import { ymdLocal, parseDateLocal, todayISO } from "./format";
 import { uid, nowISO, updateCollection } from "./storage";
-import { especieDe, infoEspecie } from "./especies";
+import { ESPECIES, especieDe, especiesPresentes, infoEspecie } from "./especies";
 import type { Animal, DBState, Especie, SanidadEvento, Tarea, TipoSanidad } from "./types";
 
 // Plan sanitario automático: por cada especie del hato, una lista corta de
@@ -87,7 +87,59 @@ const PLAN_PEQUENO: ItemPlan[] = [
   VACUNA_ANUAL,
 ];
 
-export const PLANES: Record<Especie, ItemPlan[]> = {
+/**
+ * Grupos con plan: las especies de animales individuales y las aves, que
+ * solo existen en lotes. Los cerdos comparten plan, sean de cría o de lote.
+ */
+export type GrupoPlan = Especie | "aviar";
+
+export const PLANES: Record<GrupoPlan, ItemPlan[]> = {
+  porcino: [
+    PURGA(120),
+    {
+      id: "vacunas",
+      titulo: "Vacunación",
+      detalle: "Según el calendario que le indique su veterinario y el programa oficial del ICA.",
+      tipo: "vacuna",
+      cadaDias: 180,
+      primeraEnDias: 14,
+    },
+    {
+      id: "corrales",
+      titulo: "Lavado y desinfección de corrales",
+      detalle: "Corrales limpios y secos: menos diarreas y menos parásitos.",
+      tipo: "revision",
+      cadaDias: 15,
+      primeraEnDias: 3,
+    },
+  ],
+  aviar: [
+    {
+      id: "vacunas",
+      titulo: "Revacunación",
+      detalle: "Según el calendario de su veterinario o del proveedor de las pollitas.",
+      tipo: "vacuna",
+      cadaDias: 90,
+      primeraEnDias: 14,
+    },
+    PURGA(90),
+    {
+      id: "galpon",
+      titulo: "Limpieza y desinfección del galpón",
+      detalle: "Bebederos, comederos y cama: evita enfermedades y malos olores.",
+      tipo: "revision",
+      cadaDias: 15,
+      primeraEnDias: 3,
+    },
+    {
+      id: "piojos",
+      titulo: "Control de piojos y ácaros",
+      detalle: "Revise debajo de las alas: bajan la postura sin que se note.",
+      tipo: "tratamiento",
+      cadaDias: 30,
+      primeraEnDias: 7,
+    },
+  ],
   bovino: PLAN_RUMIANTE_GRANDE,
   bufalino: PLAN_RUMIANTE_GRANDE,
   caprino: PLAN_PEQUENO,
@@ -114,14 +166,14 @@ export const PLANES: Record<Especie, ItemPlan[]> = {
   ],
 };
 
-export function origenPlan(especie: Especie, item: string): string {
+export function origenPlan(especie: GrupoPlan, item: string): string {
   return `plan:${especie}:${item}`;
 }
 
-export function leerOrigen(origen?: string): { especie: Especie; item: ItemPlan } | null {
+export function leerOrigen(origen?: string): { especie: GrupoPlan; item: ItemPlan } | null {
   const m = origen?.match(/^plan:([a-z]+):(.+)$/);
   if (!m) return null;
-  const especie = m[1] as Especie;
+  const especie = m[1] as GrupoPlan;
   const item = PLANES[especie]?.find((i) => i.id === m[2]);
   return item ? { especie, item } : null;
 }
@@ -146,7 +198,7 @@ function proximoMesCiclo(meses: number[], desde: string): string {
 }
 
 /** Animales activos a los que aplica un cuidado. */
-export function animalesDelItem(db: DBState, especie: Especie, item: ItemPlan): Animal[] {
+export function animalesDelItem(db: DBState, especie: GrupoPlan, item: ItemPlan): Animal[] {
   return db.animales.filter(
     (a) =>
       a.estado === "activo" &&
@@ -159,7 +211,7 @@ export function animalesDelItem(db: DBState, especie: Especie, item: ItemPlan): 
  * Fecha de la primera actividad al activar el plan. Si ya hay un registro de
  * ese tipo de cuidado para esa especie, cuenta desde ahí (y si ya pasó, hoy).
  */
-export function primeraFecha(db: DBState, especie: Especie, item: ItemPlan): string {
+export function primeraFecha(db: DBState, especie: GrupoPlan, item: ItemPlan): string {
   const hoy = todayISO();
   if (item.meses) return proximoMesCiclo(item.meses, hoy);
   const ids = new Set(animalesDelItem(db, especie, item).map((a) => a.id));
@@ -186,8 +238,24 @@ export function siguienteFecha(item: ItemPlan, hecha: string): string {
   return sumarDias(hecha, item.cadaDias ?? 365);
 }
 
-export function nuevaTareaPlan(especie: Especie, item: ItemPlan, fecha: string): Tarea {
-  const e = infoEspecie(especie);
+/** Nombre y emoji de un grupo del plan (las aves no son una especie de animal individual). */
+export function infoGrupo(g: GrupoPlan): { emoji: string; plural: string } {
+  return g === "aviar" ? { emoji: "🐔", plural: "Aves" } : infoEspecie(g);
+}
+
+/**
+ * Grupos que hay en la finca: especies con animales activos y, por los
+ * lotes activos, aves y cerdos.
+ */
+export function gruposPresentes(db: Pick<DBState, "animales" | "lotes">): GrupoPlan[] {
+  const set = new Set<GrupoPlan>(especiesPresentes(db.animales));
+  for (const l of db.lotes ?? []) if (l.estado === "activo") set.add(l.especie);
+  const orden: GrupoPlan[] = [...ESPECIES.map((e) => e.value), "aviar"];
+  return orden.filter((g) => set.has(g));
+}
+
+export function nuevaTareaPlan(especie: GrupoPlan, item: ItemPlan, fecha: string): Tarea {
+  const e = infoGrupo(especie);
   return {
     id: uid(),
     titulo: `${e.emoji} ${item.titulo} · ${e.plural.toLowerCase()}`,
@@ -202,17 +270,17 @@ export function nuevaTareaPlan(especie: Especie, item: ItemPlan, fecha: string):
 }
 
 /** Actividad pendiente de un cuidado (si está activo). */
-export function pendienteDe(db: DBState, especie: Especie, itemId: string): Tarea | undefined {
+export function pendienteDe(db: DBState, especie: GrupoPlan, itemId: string): Tarea | undefined {
   const o = origenPlan(especie, itemId);
   return db.tareas.find((t) => t.origen === o && !t.completada);
 }
 
-export function planActivo(db: DBState, especie: Especie): boolean {
+export function planActivo(db: DBState, especie: GrupoPlan): boolean {
   return PLANES[especie].some((i) => !!pendienteDe(db, especie, i.id));
 }
 
 /** Activa los cuidados escogidos de una especie (los que ya estén activos se dejan). */
-export function activarPlan(db: DBState, especie: Especie, itemIds: string[]): void {
+export function activarPlan(db: DBState, especie: GrupoPlan, itemIds: string[]): void {
   const nuevas = PLANES[especie]
     .filter((i) => itemIds.includes(i.id) && !pendienteDe(db, especie, i.id))
     .map((i) => nuevaTareaPlan(especie, i, primeraFecha(db, especie, i)));
@@ -220,7 +288,7 @@ export function activarPlan(db: DBState, especie: Especie, itemIds: string[]): v
 }
 
 /** Quita un cuidado del plan: borra su actividad pendiente. */
-export function quitarItem(db: DBState, especie: Especie, itemId: string): void {
+export function quitarItem(db: DBState, especie: GrupoPlan, itemId: string): void {
   const t = pendienteDe(db, especie, itemId);
   if (t) updateCollection("tareas", (list) => list.filter((x) => x.id !== t.id));
 }

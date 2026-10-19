@@ -379,7 +379,9 @@ export default function ReproduccionPage() {
                     <td>
                       {ternero
                         ? `#${ternero.nroIdentificacion} ${ternero.nombre ?? ""}`
-                        : "—"}
+                        : p.nacidosVivos !== undefined || p.nacidosMuertos !== undefined
+                          ? `Camada: ${p.nacidosVivos ?? 0} vivas${p.nacidosMuertos ? ` · ${p.nacidosMuertos} muertas` : ""}`
+                          : "—"}
                     </td>
                     <td>{p.sexoTernero === "hembra" ? "♀" : p.sexoTernero === "macho" ? "♂" : "—"}</td>
                     <td className="font-mono text-xs">
@@ -734,6 +736,9 @@ function PartoForm({
   const [crearTernero, setCrearTernero] = useState(!initial);
   const [nroTernero, setNroTernero] = useState("");
   const [nombreTernero, setNombreTernero] = useState("");
+  // Cerdas, cabras y ovejas paren camadas: se anotan vivos y muertos.
+  const madreSel = db?.animales.find((a) => a.id === form.madreId);
+  const camada = !!madreSel && ["porcino", "caprino", "ovino"].includes(especieDe(madreSel));
 
   function save(e: React.FormEvent) {
     e.preventDefault();
@@ -796,7 +801,12 @@ function PartoForm({
       <FormRow label="Madre" required colspan={2}>
         <select
           value={form.madreId}
-          onChange={(e) => setForm({ ...form, madreId: e.target.value })}
+          onChange={(e) => {
+            const m = db?.animales.find((a) => a.id === e.target.value);
+            // Los lechones casi nunca llevan ficha propia: se anota la camada.
+            if (m && especieDe(m) === "porcino" && !initial) setCrearTernero(false);
+            setForm({ ...form, madreId: e.target.value });
+          }}
         >
           <option value="">— selecciona —</option>
           {db?.animales
@@ -815,7 +825,33 @@ function PartoForm({
           onChange={(e) => setForm({ ...form, fecha: e.target.value })}
         />
       </FormRow>
-      <FormRow label="Sexo de la cría">
+      {camada && (
+        <>
+          <FormRow label="Crías nacidas vivas">
+            <input
+              type="number"
+              min={0}
+              inputMode="numeric"
+              value={form.nacidosVivos ?? ""}
+              onChange={(e) =>
+                setForm({ ...form, nacidosVivos: e.target.value === "" ? undefined : Math.max(0, parseInt(e.target.value) || 0) })
+              }
+            />
+          </FormRow>
+          <FormRow label="Crías nacidas muertas">
+            <input
+              type="number"
+              min={0}
+              inputMode="numeric"
+              value={form.nacidosMuertos ?? ""}
+              onChange={(e) =>
+                setForm({ ...form, nacidosMuertos: e.target.value === "" ? undefined : Math.max(0, parseInt(e.target.value) || 0) })
+              }
+            />
+          </FormRow>
+        </>
+      )}
+      <FormRow label={camada ? "Sexo (si fue una sola cría)" : "Sexo de la cría"}>
         <select
           value={form.sexoTernero ?? ""}
           onChange={(e) => setForm({ ...form, sexoTernero: (e.target.value || undefined) as Sexo | undefined })}

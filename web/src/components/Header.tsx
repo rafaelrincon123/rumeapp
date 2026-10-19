@@ -13,6 +13,7 @@ const TITLES: Record<string, { title: string; sub: string }> = {
   "/mi-operacion": { title: "Mi operación", sub: "Lo que te toca a ti" },
   "/hato": { title: "Hato", sub: "Animales, potreros y salud" },
   "/animales": { title: "Animales", sub: "Inventario del hato" },
+  "/lotes": { title: "Aves y lotes", sub: "Gallinas, pollos y cerdos de ceba por grupo" },
   "/potreros": { title: "Potreros", sub: "Ubicaciones y capacidad" },
   "/peso": { title: "Control de peso", sub: "Pesajes y curvas" },
   "/sanidad": { title: "Sanidad", sub: "Vacunas, tratamientos y calendario" },

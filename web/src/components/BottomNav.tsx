@@ -14,6 +14,7 @@ import {
 const HATO_ROUTES = [
   "/hato",
   "/animales",
+  "/lotes",
   "/potreros",
   "/peso",
   "/sanidad",

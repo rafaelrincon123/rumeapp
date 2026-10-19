@@ -12,6 +12,7 @@ import {
   IconRepro,
   IconMilk,
   IconBox,
+  IconLote,
 } from "@/components/icons";
 
 type TileTone = "moss" | "sea" | "sand" | "coral" | "plum" | "sky" | "clay";
@@ -77,6 +78,7 @@ export default function HatoLanding() {
     return {
       activos,
       potreros: db.potreros.length,
+      lotes: db.lotes.filter((l) => l.estado === "activo").length,
       sanidadCercana,
       proximosPartos,
       stockBajo,
@@ -100,6 +102,14 @@ export default function HatoLanding() {
       Icon: IconCow,
       tone: "moss",
       metric: stats.activos,
+    },
+    {
+      href: "/lotes",
+      label: "Aves y lotes",
+      sub: "gallinas, pollos, cerdos de ceba",
+      Icon: IconLote,
+      tone: "sand",
+      metric: stats.lotes,
     },
     {
       href: "/potreros",

@@ -105,6 +105,8 @@ const TABLE_DEFS: Record<keyof DBState, TableDef> = {
       terneroId: "ternero_id",
       pesoTerneroKg: "peso_ternero_kg",
       sexoTernero: "sexo_ternero",
+      nacidosVivos: "nacidos_vivos",
+      nacidosMuertos: "nacidos_muertos",
       complicaciones: "complicaciones",
       notas: "notas",
       createdAt: "created_at",
@@ -219,6 +221,38 @@ const TABLE_DEFS: Record<keyof DBState, TableDef> = {
       createdAt: "created_at",
     },
   },
+  lotes: {
+    table: "lotes",
+    map: {
+      id: "id",
+      especie: "especie",
+      sistema: "sistema",
+      nombre: "nombre",
+      fechaIngreso: "fecha_ingreso",
+      cantidadInicial: "cantidad_inicial",
+      edadIngresoDias: "edad_ingreso_dias",
+      raza: "raza",
+      ubicacion: "ubicacion",
+      pesoIngresoKg: "peso_ingreso_kg",
+      estado: "estado",
+      fechaCierre: "fecha_cierre",
+      notas: "notas",
+      createdAt: "created_at",
+    },
+  },
+  registrosLote: {
+    table: "registros_lote",
+    map: {
+      id: "id",
+      loteId: "lote_id",
+      fecha: "fecha",
+      tipo: "tipo",
+      cantidad: "cantidad",
+      valor: "valor",
+      notas: "notas",
+      createdAt: "created_at",
+    },
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -284,6 +318,8 @@ function emptyDB(): DBState {
     tareas: [],
     insumos: [],
     movimientosInsumo: [],
+    lotes: [],
+    registrosLote: [],
   };
 }
 

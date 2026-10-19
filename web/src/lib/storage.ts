@@ -31,6 +31,8 @@ function emptyDB(): DBState {
     tareas: [],
     insumos: [],
     movimientosInsumo: [],
+    lotes: [],
+    registrosLote: [],
   };
 }
 

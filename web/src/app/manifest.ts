@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "RumeApp · Gestión ganadera",
     short_name: "RumeApp",
-    description: "Su finca en el celular: bovinos, búfalos, cabras, ovejas y caballos.",
+    description: "Su finca en el celular: ganado, cabras, ovejas, caballos, cerdos y aves.",
     start_url: "/",
     display: "standalone",
     orientation: "portrait",

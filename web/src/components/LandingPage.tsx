@@ -16,6 +16,7 @@ import {
   IconCheck,
   IconArrowUp,
   IconSparkles,
+  IconLote,
 } from "./icons";
 import PricingCards from "./PricingCards";
 import OfertaFundador, { QUIERE_FUNDADOR_KEY } from "./OfertaFundador";
@@ -102,7 +103,7 @@ export default function LandingPage({ onLogin, onSignup, seccion = "inicio" }: P
           <PageHeader
             eyebrow="Funciones"
             titulo={<>Todo lo que hace<br /><em>RumeApp.</em></>}
-            texto="Para vacas, búfalos, cabras, ovejas y caballos: plan sanitario, reproducción, potreros, inventario y gastos entre socios. Esto es lo que va a tener en el celular."
+            texto="Para vacas, búfalos, cabras, ovejas, caballos, cerdos y aves: plan sanitario, reproducción, lotes, inventario y gastos entre socios. Esto es lo que va a tener en el celular."
           />
           <EspeciesSection />
           <PlanSanitarioSection />
@@ -221,8 +222,6 @@ function LandingStyles() {
         background: linear-gradient(180deg, rgba(14,27,18,0) 35%, rgba(14,27,18,0.88) 100%);
       }
       .especie-card-texto { position: absolute; left: 0; right: 0; bottom: 0; z-index: 1; padding: 1rem; }
-      .especie-card.col-span-2 { aspect-ratio: 16 / 10; }
-      @media (min-width: 768px) { .especie-card.col-span-2 { aspect-ratio: 4 / 5; } }
       .aviso-entra { animation: aviso-entra 0.45s cubic-bezier(0.16,1,0.3,1); }
       @keyframes aviso-entra { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
@@ -912,9 +911,9 @@ function HeroInicio({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
               style={{ background: "rgba(184,206,122,0.16)", border: "1px solid rgba(184,206,122,0.35)", color: "var(--lime-bright)" }}
             >
               <span className="sm:hidden">
-                <span aria-hidden className="tracking-normal">🐄 🐃 🐐 🐑 🐴</span> · Todas sus especies
+                <span aria-hidden className="tracking-normal">🐄 🐐 🐑 🐴 🐖 🐔</span> · Todas sus especies
               </span>
-              <span className="hidden sm:inline">Bovinos · Búfalos · Cabras · Ovejas · Caballos</span>
+              <span className="hidden sm:inline">Ganado · Cabras · Ovejas · Caballos · Cerdos · Aves</span>
             </div>
             <h1
               className="display-xxl uppercase text-white mt-6"
@@ -927,9 +926,9 @@ function HeroInicio({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
               className="mt-6 text-base md:text-lg max-w-xl leading-relaxed"
               style={{ color: "rgba(255,255,255,0.90)", textShadow: "0 1px 6px rgba(0,0,0,0.35)" }}
             >
-              Vacas, búfalos, cabras, ovejas o caballos: sus animales, partos y gastos entre
-              socios, sin cuaderno. RumeApp le arma el plan sanitario y le avisa qué toca hacer
-              cada día.
+              Vacas, búfalos, cabras, ovejas, caballos, cerdos o gallinas: sus animales, partos,
+              huevos y gastos entre socios, sin cuaderno. RumeApp le arma el plan sanitario y le
+              avisa qué toca hacer cada día.
             </p>
 
             <div className="mt-8 flex flex-col sm:flex-row gap-4 sm:gap-5 sm:items-center">
@@ -1048,7 +1047,9 @@ const AVISOS_PORTADA = [
   { emoji: "🐄", cuando: "ahora", texto: "Hoy toca: purgar 8 novillas del potrero La Loma" },
   { emoji: "🐐", cuando: "mañana", texto: "Recorte de pezuñas de las 12 cabras" },
   { emoji: "🐴", cuando: "en 3 días", texto: "Herraje de Lucero y Canela" },
+  { emoji: "🐔", cuando: "hoy", texto: "Galpón 1: 412 huevos · postura del 91 %" },
   { emoji: "🐑", cuando: "esta semana", texto: "Parto probable de la oveja Mora" },
+  { emoji: "🐖", cuando: "en 5 días", texto: "Parto de la cerda Pecosa" },
   { emoji: "🐃", cuando: "1 de noviembre", texto: "Empieza el ciclo de vacunación de las búfalas" },
 ];
 
@@ -1100,6 +1101,9 @@ const ESPECIES_LANDING = [
   { foto: "caprino", nombre: "Cabras", emoji: "🐐", detalle: "Cabritos y chivos, partos a los 5 meses, purgas y recorte de pezuñas." },
   { foto: "ovino", nombre: "Ovejas", emoji: "🐑", detalle: "Corderos y carneros de pelo, purgas cada 3 meses y control de partos." },
   { foto: "equino", nombre: "Caballos", emoji: "🐴", detalle: "Potros y yeguas: herraje, revisión de dientes y gestación de 11 meses." },
+  { foto: "porcino", nombre: "Cerdos", emoji: "🐖", detalle: "Cerdas y verracos uno por uno, camadas, y lotes de ceba con ganancia diaria y conversión." },
+  { foto: "ponedoras", nombre: "Ponedoras", emoji: "🥚", detalle: "Huevos del día, % de postura, alimento por gallina y mortalidad." },
+  { foto: "engorde", nombre: "Pollo de engorde", emoji: "🐥", detalle: "Peso semanal, conversión alimenticia y día del ciclo de cada lote." },
 ];
 
 function EspeciesSection() {
@@ -1119,22 +1123,19 @@ function EspeciesSection() {
             <em style={{ color: "var(--forest-3)", fontStyle: "normal" }}>para todos sus animales.</em>
           </h2>
           <p className="mt-5 text-base md:text-lg" style={{ color: "rgba(20, 38, 26, 0.72)" }}>
-            Al registrar un animal escoge la especie, y RumeApp usa los nombres, las razas, los días
-            de gestación y el plan sanitario de esa especie.
+            Vacas, búfalos, cabras, ovejas, caballos y cerdos de cría, uno por uno, con sus nombres,
+            razas, gestación y plan sanitario. Gallinas, pollos y cerdos de ceba, por lotes.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
-          {ESPECIES_LANDING.map((e, i) => (
-            <article
-              key={e.foto}
-              className={`especie-card${i === 4 ? " col-span-2 md:col-span-1" : ""}`}
-            >
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          {ESPECIES_LANDING.map((e) => (
+            <article key={e.foto} className="especie-card">
               <Image
                 src={`/landing/${e.foto}.webp`}
                 alt={e.nombre}
                 fill
-                sizes="(min-width: 768px) 20vw, 50vw"
+                sizes="(min-width: 768px) 25vw, 50vw"
                 className="object-cover"
               />
               <div className="especie-card-texto">
@@ -1379,7 +1380,7 @@ function ModulesOverview() {
     { icon: <IconTask size={20} />, name: "Tareas" },
     { icon: <IconBox size={20} />, name: "Inventario" },
     { icon: <IconUser size={20} />, name: "Socios" },
-    { icon: <IconSparkles size={20} />, name: "En vivo" },
+    { icon: <IconLote size={20} />, name: "Aves y lotes" },
   ];
   return (
     <section
@@ -1565,8 +1566,12 @@ function FAQ() {
       a: "Nada para arrancar. El plan Ranchero es gratis para siempre (hasta 5 animales). Los planes pagos tienen 20% de descuento los primeros 3 meses y traen de regalo la guía práctica «Ganadería rentable» (55 páginas); pagando el año completo ahorra 25%.",
     },
     {
-      q: "¿Sirve para cabras, ovejas, búfalos o caballos?",
-      a: "Sí. Al registrar cada animal escoge la especie: bovino, búfalo, cabra, oveja o caballo. La app usa los nombres de esa especie (cabrito, cordero, potranca, bucerro…), sugiere sus razas, calcula el parto con su gestación y le arma su plan sanitario. Puede tener varias especies en la misma finca.",
+      q: "¿Sirve para cabras, ovejas, búfalos, caballos o cerdos?",
+      a: "Sí. Al registrar cada animal escoge la especie: bovino, búfalo, cabra, oveja, caballo o cerdo. La app usa los nombres de esa especie (cabrito, cordero, potranca, bucerro, lechón…), sugiere sus razas, calcula el parto con su gestación y le arma su plan sanitario. Puede tener varias especies en la misma finca.",
+    },
+    {
+      q: "¿Y las gallinas, los pollos y los cerdos de ceba?",
+      a: "Se llevan por lotes, no uno por uno. Cree el lote (ponedoras, pollo de engorde, gallinas de campo o cerdos de levante y ceba) y anote cada día los huevos, la mortalidad, el alimento, el peso y las ventas. RumeApp le calcula el % de postura, la conversión alimenticia, la ganancia diaria y cuánto le deja cada lote.",
     },
     {
       q: "¿Qué es el plan sanitario automático?",
@@ -1684,8 +1689,8 @@ function FinalCTA({ onSignup }: { onSignup: () => void }) {
             className="mt-6 max-w-xl mx-auto text-base md:text-lg"
             style={{ color: "rgba(255,255,255,0.90)", textShadow: "0 1px 6px rgba(0,0,0,0.35)" }}
           >
-            Vacas, búfalos, cabras, ovejas o caballos. Sin instalación y sin
-            tarjeta: en 2 minutos ya está registrando sus animales.
+            Ganado, cabras, ovejas, caballos, cerdos o gallinas. Sin instalación y
+            sin tarjeta: en 2 minutos ya está registrando sus animales.
           </p>
           <button className="btn-lime mt-10" onClick={onSignup} style={{ padding: "1.1rem 2.4rem" }}>
             Crear mi cuenta gratis <IconArrowUp size={14} />
@@ -1733,9 +1738,9 @@ function Footer({ onLogin, onSignup, compacto = false }: { onLogin: () => void; 
               <div className="text-2xl font-bold uppercase tracking-tight">RumeApp</div>
             </div>
             <p className="mt-5 text-sm max-w-md leading-relaxed" style={{ color: "rgba(255,255,255,0.72)" }}>
-              La app para manejar su finca en Colombia y Latinoamérica: bovinos,
-              búfalos, cabras, ovejas y caballos. Animales, plan sanitario y
-              gastos entre socios &mdash; todo en un solo lugar.
+              La app para manejar su finca en Colombia y Latinoamérica: ganado,
+              búfalos, cabras, ovejas, caballos, cerdos y aves. Animales, lotes,
+              plan sanitario y gastos entre socios &mdash; todo en un solo lugar.
             </p>
             <div className="mt-6 flex items-center gap-3">
               {REDES.map((r) => (

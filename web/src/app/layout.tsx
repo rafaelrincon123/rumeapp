@@ -20,12 +20,12 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://rumea.app"),
   title: "RumeApp · Su finca en el celular",
   description:
-    "Bovinos, búfalos, cabras, ovejas y caballos: animales, plan sanitario automático, partos y gastos entre socios, desde el celular.",
+    "Ganado, búfalos, cabras, ovejas, caballos, cerdos y aves: animales, lotes, plan sanitario automático, partos y gastos entre socios, desde el celular.",
   appleWebApp: { capable: true, title: "RumeApp", statusBarStyle: "default" },
   openGraph: {
     title: "RumeApp — Su finca en el celular",
     description:
-      "Para vacas, búfalos, cabras, ovejas y caballos: plan sanitario automático, partos y gastos entre socios.",
+      "Para ganado, cabras, ovejas, caballos, cerdos y gallinas: plan sanitario automático, lotes, partos y gastos entre socios.",
     type: "website",
     locale: "es_CO",
     siteName: "RumeApp",
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "RumeApp — Su finca en el celular",
-    description: "Vacas, búfalos, cabras, ovejas y caballos: todo su manejo en una app.",
+    description: "Ganado, cabras, ovejas, caballos, cerdos y aves: todo su manejo en una app.",
   },
 };
 
