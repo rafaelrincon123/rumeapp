@@ -35,6 +35,7 @@ const INFO: Record<
     Icon: IconPasture,
     features: [
       { texto: "Hato, sanidad, gastos y actividades" },
+      { texto: "1 lote de aves o cerdos" },
       { texto: "1 editor + hasta 4 personas en solo lectura" },
       { texto: "Funciona en celular y computador" },
       { texto: "Soporte por correo" },
@@ -46,6 +47,7 @@ const INFO: Record<
     Icon: IconCow,
     features: [
       { texto: "Todo lo del plan Ranchero" },
+      { texto: "Lotes de aves y cerdos ilimitados" },
       { texto: "Cualquier rol para tu equipo" },
       { texto: "Reparto de gastos entre socios" },
       { texto: "Reportes en PDF de cada sección" },

@@ -17,12 +17,39 @@ import {
 } from "@/lib/lotes";
 import { planActivo } from "@/lib/planSanitario";
 import type { Ingreso, Lote, RegistroLote, SistemaLote, TipoRegistroLote } from "@/lib/types";
+import { PLAN_LIMITS, planEfectivo } from "@/lib/plans";
+import { useFincaActiva } from "@/lib/useFincaActiva";
 import Modal from "@/components/Modal";
 import FormRow from "@/components/FormRow";
 import HeroStat from "@/components/HeroStat";
 
+/** ¿El plan deja tener un lote activo más? (el server lo vuelve a revisar). */
+function useCupoLotes(): { lleno: boolean; max: number | null } {
+  const { db } = useDB();
+  const { activa } = useFincaActiva();
+  const max = activa ? PLAN_LIMITS[planEfectivo(activa)].maxLotes : null;
+  const activos = db?.lotes.filter((l) => l.estado === "activo").length ?? 0;
+  return { lleno: max !== null && activos >= max, max };
+}
+
+/** Aviso cuando el plan gratis ya tiene su lote activo. */
+function AvisoCupoLotes({ max }: { max: number | null }) {
+  return (
+    <div className="rounded-xl border border-primary px-4 py-3 text-sm space-y-2" style={{ background: "rgba(184, 206, 122, 0.18)" }}>
+      <p>
+        <b>El plan gratis permite {max} lote activo.</b> Para manejar más lotes de gallinas, pollos o
+        cerdos al tiempo, cierre el que tiene o pase al plan Ganadero, que tiene lotes ilimitados.
+      </p>
+      <Link href="/plan" className="btn btn-primary inline-flex">
+        Ver planes
+      </Link>
+    </div>
+  );
+}
+
 export default function LotesPage() {
   const { db, ready } = useDB();
+  const cupo = useCupoLotes();
   const [vista, setVista] = useState<"activos" | "cerrados">("activos");
   const [nuevo, setNuevo] = useState(false);
   const [editar, setEditar] = useState<Lote | null>(null);
@@ -119,16 +146,20 @@ export default function LotesPage() {
         title={editar ? `Editar ${editar.nombre}` : "Nuevo lote"}
         size="lg"
       >
-        <LoteForm
-          key={editar?.id ?? "nuevo"}
-          initial={editar}
-          numero={db.lotes.length + 1}
-          onSaved={(l) => {
-            setNuevo(false);
-            setEditar(null);
-            setDetalleId(l.id);
-          }}
-        />
+        {!editar && cupo.lleno ? (
+          <AvisoCupoLotes max={cupo.max} />
+        ) : (
+          <LoteForm
+            key={editar?.id ?? "nuevo"}
+            initial={editar}
+            numero={db.lotes.length + 1}
+            onSaved={(l) => {
+              setNuevo(false);
+              setEditar(null);
+              setDetalleId(l.id);
+            }}
+          />
+        )}
       </Modal>
 
       <Modal
@@ -432,7 +463,9 @@ function LoteForm({
 // ---------------------------------------------------------------------------
 function LoteDetalle({ lote, onEditar, onBorrado }: { lote: Lote; onEditar: () => void; onBorrado: () => void }) {
   const { db } = useDB();
+  const cupo = useCupoLotes();
   const [registrando, setRegistrando] = useState<TipoRegistroLote | null>(null);
+  const [sinCupo, setSinCupo] = useState(false);
   if (!db) return null;
   const s = infoSistema(lote.sistema);
   const ind = indicadores(lote, db.registrosLote);
@@ -498,6 +531,10 @@ function LoteDetalle({ lote, onEditar, onBorrado }: { lote: Lote; onEditar: () =
   }
 
   function reabrir() {
+    if (cupo.lleno) {
+      setSinCupo(true);
+      return;
+    }
     updateCollection("lotes", (list) =>
       list.map((l) => (l.id === lote.id ? { ...l, estado: "activo", fechaCierre: undefined } : l))
     );
@@ -618,6 +655,8 @@ function LoteDetalle({ lote, onEditar, onBorrado }: { lote: Lote; onEditar: () =
           </ul>
         )}
       </div>
+
+      {sinCupo && <AvisoCupoLotes max={cupo.max} />}
 
       <div className="flex flex-wrap gap-2 pt-1 border-t border-rule">
         <button type="button" className="btn btn-ghost" onClick={onEditar}>

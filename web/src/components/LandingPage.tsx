@@ -124,7 +124,7 @@ export default function LandingPage({ onLogin, onSignup, seccion = "inicio" }: P
           <PageHeader
             eyebrow="Precios"
             titulo={<>Empiece gratis.<br /><em>Crezca cuando quiera.</em></>}
-            texto="El plan Ranchero es gratis para siempre, hasta 5 animales. Sin tarjeta."
+            texto="El plan Ranchero es gratis para siempre: hasta 5 animales y 1 lote de aves o cerdos. Sin tarjeta."
           />
           <Pricing onSignup={onSignup} />
           <CalculadoraPerdidas onLogin={onSignup} />
@@ -1563,7 +1563,7 @@ function FAQ() {
   const qs = [
     {
       q: "¿Cuánto cuesta usar RumeApp?",
-      a: "Nada para arrancar. El plan Ranchero es gratis para siempre (hasta 5 animales). Los planes pagos tienen 20% de descuento los primeros 3 meses y traen de regalo la guía práctica «Ganadería rentable» (55 páginas); pagando el año completo ahorra 25%.",
+      a: "Nada para arrancar. El plan Ranchero es gratis para siempre (hasta 5 animales y 1 lote de aves o cerdos). Los planes pagos tienen 20% de descuento los primeros 3 meses y traen de regalo la guía práctica «Ganadería rentable» (55 páginas); pagando el año completo ahorra 25%.",
     },
     {
       q: "¿Sirve para cabras, ovejas, búfalos, caballos o cerdos?",

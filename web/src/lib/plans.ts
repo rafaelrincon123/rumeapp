@@ -16,19 +16,21 @@ export const PLAN_LIMITS: Record<
     maxUsuariosEditor: number | null;
     /** null = ilimitado */
     maxFincas: number | null;
+    /** Lotes ACTIVOS de aves o cerdos (null = ilimitado). Espejo de plan_max_lotes(). */
+    maxLotes: number | null;
   }
 > = {
   ranchero: {
     nombre: "Ranchero", precioCOP: 0,
-    maxAnimales: 5, maxUsuarios: 5, maxUsuariosEditor: 1, maxFincas: 1,
+    maxAnimales: 5, maxUsuarios: 5, maxUsuariosEditor: 1, maxFincas: 1, maxLotes: 1,
   },
   ganadero: {
     nombre: "Ganadero", precioCOP: 25_000,
-    maxAnimales: 50, maxUsuarios: 5, maxUsuariosEditor: null, maxFincas: 3,
+    maxAnimales: 50, maxUsuarios: 5, maxUsuariosEditor: null, maxFincas: 3, maxLotes: null,
   },
   hacienda: {
     nombre: "Hacienda", precioCOP: 55_000,
-    maxAnimales: null, maxUsuarios: null, maxUsuariosEditor: null, maxFincas: null,
+    maxAnimales: null, maxUsuarios: null, maxUsuariosEditor: null, maxFincas: null, maxLotes: null,
   },
 };
 
