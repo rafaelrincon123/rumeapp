@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "RumeApp · Gestión ganadera",
     short_name: "RumeApp",
-    description: "Registra tu finca y controla tu hato: animales, sanidad, gastos y más.",
+    description: "Su finca en el celular: bovinos, búfalos, cabras, ovejas y caballos.",
     start_url: "/",
     display: "standalone",
     orientation: "portrait",

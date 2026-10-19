@@ -39,12 +39,10 @@ interface Props {
 }
 
 // ---------------------------------------------------------------------------
-//  Fotos (Unsplash, licencia libre)
+//  Fotos (generadas con Kie.ai: marketing/landing/generar.py → optimizar.py)
 // ---------------------------------------------------------------------------
-const PHOTO_HERO =
-  "https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&w=1800&q=85";
-const PHOTO_CAMPO_ATARDECER =
-  "https://images.unsplash.com/photo-1471958680802-1345a694ba6d?auto=format&fit=crop&w=1800&q=85";
+const PHOTO_HERO = "/landing/hero.webp";
+const PHOTO_CAMPO_ATARDECER = "/landing/cierre.webp";
 
 const PHOTO_FALLBACK =
   "data:image/svg+xml;utf8," +
@@ -104,8 +102,10 @@ export default function LandingPage({ onLogin, onSignup, seccion = "inicio" }: P
           <PageHeader
             eyebrow="Funciones"
             titulo={<>Todo lo que hace<br /><em>RumeApp.</em></>}
-            texto="Hato, sanidad, reproducción, potreros, inventario y gastos entre socios. Esto es lo que va a tener en el celular."
+            texto="Para vacas, búfalos, cabras, ovejas y caballos: plan sanitario, reproducción, potreros, inventario y gastos entre socios. Esto es lo que va a tener en el celular."
           />
+          <EspeciesSection />
+          <PlanSanitarioSection />
           <AppSummary />
           <ModulesOverview />
           <SociosSection />
@@ -204,6 +204,27 @@ function LandingStyles() {
 
       .reveal { opacity: 0; transform: translateY(14px); transition: opacity 0.45s cubic-bezier(0.16,1,0.3,1), transform 0.45s cubic-bezier(0.16,1,0.3,1); }
       .reveal.in-view { opacity: 1; transform: none; }
+      .especie-card {
+        position: relative;
+        aspect-ratio: 4 / 5;
+        border-radius: 22px;
+        overflow: hidden;
+        box-shadow: 0 18px 40px -18px rgba(20, 38, 26, 0.55);
+        color: white;
+      }
+      .especie-card img { transition: transform 0.6s cubic-bezier(0.16,1,0.3,1); }
+      .especie-card:hover img { transform: scale(1.06); }
+      .especie-card::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(14,27,18,0) 35%, rgba(14,27,18,0.88) 100%);
+      }
+      .especie-card-texto { position: absolute; left: 0; right: 0; bottom: 0; z-index: 1; padding: 1rem; }
+      .especie-card.col-span-2 { aspect-ratio: 16 / 10; }
+      @media (min-width: 768px) { .especie-card.col-span-2 { aspect-ratio: 4 / 5; } }
+      .aviso-entra { animation: aviso-entra 0.45s cubic-bezier(0.16,1,0.3,1); }
+      @keyframes aviso-entra { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
       /* Display XXL */
       .display-xxl {
@@ -890,7 +911,10 @@ function HeroInicio({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
               className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[0.65rem] font-mono uppercase tracking-[0.16em]"
               style={{ background: "rgba(184,206,122,0.16)", border: "1px solid rgba(184,206,122,0.35)", color: "var(--lime-bright)" }}
             >
-              Gestión ganadera · Hecho en Colombia
+              <span className="sm:hidden">
+                <span aria-hidden className="tracking-normal">🐄 🐃 🐐 🐑 🐴</span> · Todas sus especies
+              </span>
+              <span className="hidden sm:inline">Bovinos · Búfalos · Cabras · Ovejas · Caballos</span>
             </div>
             <h1
               className="display-xxl uppercase text-white mt-6"
@@ -903,8 +927,9 @@ function HeroInicio({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
               className="mt-6 text-base md:text-lg max-w-xl leading-relaxed"
               style={{ color: "rgba(255,255,255,0.90)", textShadow: "0 1px 6px rgba(0,0,0,0.35)" }}
             >
-              Animales, vacunas, partos y gastos entre socios, anotados en segundos y sin
-              cuaderno. RumeApp le avisa qué toca hacer cada día.
+              Vacas, búfalos, cabras, ovejas o caballos: sus animales, partos y gastos entre
+              socios, sin cuaderno. RumeApp le arma el plan sanitario y le avisa qué toca hacer
+              cada día.
             </p>
 
             <div className="mt-8 flex flex-col sm:flex-row gap-4 sm:gap-5 sm:items-center">
@@ -1019,7 +1044,23 @@ function VentajasNube() {
 }
 
 /** Celular de la portada: captura real de la pantalla de Sanidad + un aviso encima. */
+const AVISOS_PORTADA = [
+  { emoji: "🐄", cuando: "ahora", texto: "Hoy toca: purgar 8 novillas del potrero La Loma" },
+  { emoji: "🐐", cuando: "mañana", texto: "Recorte de pezuñas de las 12 cabras" },
+  { emoji: "🐴", cuando: "en 3 días", texto: "Herraje de Lucero y Canela" },
+  { emoji: "🐑", cuando: "esta semana", texto: "Parto probable de la oveja Mora" },
+  { emoji: "🐃", cuando: "1 de noviembre", texto: "Empieza el ciclo de vacunación de las búfalas" },
+];
+
 function CelularPortada() {
+  // El aviso cambia cada pocos segundos: una especie distinta cada vez.
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const t = window.setInterval(() => setI((n) => (n + 1) % AVISOS_PORTADA.length), 3800);
+    return () => window.clearInterval(t);
+  }, []);
+  const aviso = AVISOS_PORTADA[i];
   return (
     <div className="relative mx-auto w-full max-w-[290px]">
       <div className="phone-frame" style={{ maxWidth: 290 }}>
@@ -1039,12 +1080,179 @@ function CelularPortada() {
         style={{ background: "rgba(248,245,238,0.97)", boxShadow: "0 18px 40px -12px rgba(0,0,0,0.45)", color: "var(--forest)" }}
       >
         <Image src="/logo.png" alt="" width={34} height={34} className="w-[34px] h-[34px] rounded-lg shrink-0" />
-        <div className="min-w-0">
-          <div className="text-[0.62rem] font-mono uppercase tracking-widest" style={{ opacity: 0.6 }}>RumeApp · ahora</div>
-          <div className="text-[0.82rem] font-semibold leading-snug">Hoy toca: purgar 8 novillas del potrero La Loma</div>
+        <div className="min-w-0" aria-live="polite">
+          <div className="text-[0.62rem] font-mono uppercase tracking-widest" style={{ opacity: 0.6 }}>RumeApp · {aviso.cuando}</div>
+          <div key={i} className="aviso-entra text-[0.82rem] font-semibold leading-snug">
+            {aviso.emoji} {aviso.texto}
+          </div>
         </div>
       </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+//  Especies — una app para vacas, búfalos, cabras, ovejas y caballos
+// ---------------------------------------------------------------------------
+const ESPECIES_LANDING = [
+  { foto: "bovino", nombre: "Bovinos", emoji: "🐄", detalle: "Leche, carne o doble propósito. Ciclo de vacunación ICA, baños y palpación." },
+  { foto: "bufalino", nombre: "Búfalos", emoji: "🐃", detalle: "Bucerros, búfalas y su gestación de 10 meses, con sus propios nombres." },
+  { foto: "caprino", nombre: "Cabras", emoji: "🐐", detalle: "Cabritos y chivos, partos a los 5 meses, purgas y recorte de pezuñas." },
+  { foto: "ovino", nombre: "Ovejas", emoji: "🐑", detalle: "Corderos y carneros de pelo, purgas cada 3 meses y control de partos." },
+  { foto: "equino", nombre: "Caballos", emoji: "🐴", detalle: "Potros y yeguas: herraje, revisión de dientes y gestación de 11 meses." },
+];
+
+function EspeciesSection() {
+  const ref = useReveal<HTMLDivElement>();
+  return (
+    <section id="especies" className="relative py-16 md:py-24" style={{ background: "var(--cream)" }}>
+      <div ref={ref} className="reveal max-w-6xl mx-auto px-4 md:px-6">
+        <div className="text-center mb-10 md:mb-14 max-w-3xl mx-auto">
+          <span
+            className="inline-block text-[0.65rem] font-mono uppercase tracking-[0.14em] px-3 py-1.5 rounded-full mb-5 font-semibold"
+            style={{ background: "var(--lime)", color: "var(--forest)" }}
+          >
+            NUEVO · VARIAS ESPECIES
+          </span>
+          <h2 className="display-lg uppercase" style={{ fontSize: "clamp(2rem, 5vw, 3.25rem)", color: "var(--forest)" }}>
+            Una sola app<br />
+            <em style={{ color: "var(--forest-3)", fontStyle: "normal" }}>para todos sus animales.</em>
+          </h2>
+          <p className="mt-5 text-base md:text-lg" style={{ color: "rgba(20, 38, 26, 0.72)" }}>
+            Al registrar un animal escoge la especie, y RumeApp usa los nombres, las razas, los días
+            de gestación y el plan sanitario de esa especie.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
+          {ESPECIES_LANDING.map((e, i) => (
+            <article
+              key={e.foto}
+              className={`especie-card${i === 4 ? " col-span-2 md:col-span-1" : ""}`}
+            >
+              <Image
+                src={`/landing/${e.foto}.webp`}
+                alt={e.nombre}
+                fill
+                sizes="(min-width: 768px) 20vw, 50vw"
+                className="object-cover"
+              />
+              <div className="especie-card-texto">
+                <div className="text-lg font-bold uppercase tracking-tight">
+                  <span aria-hidden>{e.emoji}</span> {e.nombre}
+                </div>
+                <p className="text-xs leading-snug mt-1" style={{ color: "rgba(255,255,255,0.85)" }}>
+                  {e.detalle}
+                </p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+//  Plan sanitario automático — réplica de la pantalla real
+// ---------------------------------------------------------------------------
+function PlanSanitarioSection() {
+  const ref = useReveal<HTMLDivElement>();
+  const cuidados = [
+    { titulo: "Purga (desparasitación)", fecha: "26 oct · cada 4 meses", chip: "en 7 días", hoy: false },
+    { titulo: "Baño contra garrapata y mosca", fecha: "19 oct · cada mes", chip: "hoy", hoy: true },
+    { titulo: "Vacunación del ciclo oficial (ICA)", fecha: "1 nov · mayo y noviembre", chip: "en 13 días", hoy: false },
+    { titulo: "Revisión reproductiva de las hembras", fecha: "18 nov · cada 6 meses", chip: "en 30 días", hoy: false },
+  ];
+  return (
+    <section id="plan-sanitario" className="relative" style={{ background: "var(--forest)", color: "white" }}>
+      <div ref={ref} className="reveal max-w-6xl mx-auto px-4 md:px-6 py-20 md:py-28 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <div>
+          <span
+            className="inline-block text-[0.65rem] font-mono uppercase tracking-[0.14em] px-3 py-1.5 rounded-full mb-6 font-semibold"
+            style={{ background: "var(--lime)", color: "var(--forest)" }}
+          >
+            PLAN SANITARIO AUTOMÁTICO
+          </span>
+          <h2 className="display-lg uppercase text-white" style={{ fontSize: "clamp(2rem, 5vw, 3.25rem)" }}>
+            Que no se le pase<br />
+            <em style={{ color: "var(--lime-bright)", fontStyle: "normal" }}>ni una purga.</em>
+          </h2>
+          <p className="mt-6 text-base leading-relaxed max-w-lg" style={{ color: "rgba(255,255,255,0.78)" }}>
+            Escoja los cuidados de cada especie y RumeApp le arma el calendario: purgas, baños,
+            vacunación, pezuñas, cascos y revisiones.
+          </p>
+          <ul className="mt-8 space-y-3 max-w-lg">
+            {[
+              ["Le avisa el día que toca", "En la app y en el correo de la mañana «Hoy toca»."],
+              ["Se programa solo", "Al marcarlo hecho, la app pone la siguiente fecha."],
+              ["Queda en la hoja de vida", "Con un toque se anota en todos los animales de esa especie."],
+            ].map(([t, d]) => (
+              <li key={t} className="flex gap-3">
+                <span
+                  className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5"
+                  style={{ background: "var(--lime)", color: "var(--forest)" }}
+                >
+                  <IconCheck size={14} />
+                </span>
+                <span>
+                  <span className="block font-semibold">{t}</span>
+                  <span className="block text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>{d}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-6 text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>
+            Es una guía general: el producto y la dosis los decide su veterinario.
+          </p>
+        </div>
+
+        <div className="ring-card max-w-md w-full mx-auto lg:ml-auto">
+          <div className="ring-card-inner" style={{ background: "#F8F5EE", color: "var(--forest)" }}>
+            <div className="flex items-center gap-3">
+              <span className="text-3xl leading-none" aria-hidden>🐄</span>
+              <div className="flex-1">
+                <div className="font-bold">Plan sanitario · Bovinos</div>
+                <div className="text-xs" style={{ opacity: 0.6 }}>24 animales activos</div>
+              </div>
+              <span className="text-[0.65rem] font-semibold px-2 py-1 rounded-full" style={{ background: "rgba(95,130,72,0.15)", color: "#3E5A24" }}>
+                Activo
+              </span>
+            </div>
+            <ul className="mt-4 space-y-2">
+              {cuidados.map((c) => (
+                <li
+                  key={c.titulo}
+                  className="rounded-xl px-3 py-2.5 flex items-center gap-3"
+                  style={{ background: "white", border: "1px solid rgba(20,38,26,0.08)" }}
+                >
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-sm font-semibold leading-tight">{c.titulo}</span>
+                    <span className="block text-[0.7rem] mt-0.5" style={{ opacity: 0.6 }}>{c.fecha}</span>
+                  </span>
+                  <span
+                    className="text-[0.65rem] font-semibold px-2 py-1 rounded-full whitespace-nowrap"
+                    style={
+                      c.hoy
+                        ? { background: "var(--forest)", color: "var(--lime-bright)" }
+                        : { background: "rgba(20,38,26,0.06)", color: "var(--forest-2)" }
+                    }
+                  >
+                    {c.chip}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <div
+              className="mt-4 rounded-xl px-3 py-2.5 text-sm font-semibold text-center"
+              style={{ background: "var(--forest)", color: "var(--lime-bright)" }}
+            >
+              ✓ Hecho · baño de hoy
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -1057,17 +1265,17 @@ function AppSummary() {
     {
       Icon: IconCow,
       verb: "Lleve la hoja de vida",
-      desc: "de cada animal: raza, categoría, peso, padres, potrero, fotos y estado (activo, vendido, muerto).",
+      desc: "de cada animal (vaca, búfalo, cabra, oveja o caballo): raza, categoría, peso, padres, potrero, fotos y estado.",
     },
     {
       Icon: IconHealth,
       verb: "No se le pase una vacuna",
-      desc: "programe vacunas, tratamientos y desparasitaciones. La app le avisa qué toca la próxima semana.",
+      desc: "active el plan sanitario de su especie y la app programa purgas, baños, vacunas y revisiones, y le avisa el día que toca.",
     },
     {
       Icon: IconRepro,
       verb: "Controle preñeces y partos",
-      desc: "servicios (monta o inseminación), diagnóstico, fecha probable de parto y registro de crías nuevas.",
+      desc: "monta o inseminación, diagnóstico y fecha probable de parto según la especie, y la ficha de cada cría nueva.",
     },
     {
       Icon: IconMoney,
@@ -1233,11 +1441,11 @@ function ThreePillars() {
       featured: true,
     },
     {
-      eyebrow: "Próximamente",
-      title: "Cédula digital por animal",
-      desc: "Cada cabeza con su propio QR. Muéstrelo al veterinario o al comprador — historial completo, imposible falsificar.",
-      icon: <IconCow size={22} />,
-      badge: "PRÓX.",
+      eyebrow: "Nuevo",
+      title: "Plan sanitario automático",
+      desc: "Para vacas, búfalos, cabras, ovejas y caballos. Le avisa cuándo toca cada cuidado y programa el siguiente solo.",
+      icon: <IconHealth size={22} />,
+      badge: "NUEVO",
     },
   ];
   return (
@@ -1357,6 +1565,14 @@ function FAQ() {
       a: "Nada para arrancar. El plan Ranchero es gratis para siempre (hasta 5 animales). Los planes pagos tienen 20% de descuento los primeros 3 meses y traen de regalo la guía práctica «Ganadería rentable» (55 páginas); pagando el año completo ahorra 25%.",
     },
     {
+      q: "¿Sirve para cabras, ovejas, búfalos o caballos?",
+      a: "Sí. Al registrar cada animal escoge la especie: bovino, búfalo, cabra, oveja o caballo. La app usa los nombres de esa especie (cabrito, cordero, potranca, bucerro…), sugiere sus razas, calcula el parto con su gestación y le arma su plan sanitario. Puede tener varias especies en la misma finca.",
+    },
+    {
+      q: "¿Qué es el plan sanitario automático?",
+      a: "Una lista de cuidados por especie (purgas, baños, vacunación, pezuñas, cascos, revisiones) que usted activa con un toque. RumeApp le avisa el día que toca, en la app y en el correo de la mañana, y al marcarlo hecho programa la siguiente vez. Es una guía general: el producto y la dosis los decide su veterinario.",
+    },
+    {
       q: "¿Necesito descargar la app de Play Store o App Store?",
       a: "No. RumeApp funciona en la web: se abre en el navegador (Chrome, Safari) del celular, la tablet o el computador, sin descargar nada y sin ocupar espacio. Si quiere tenerla a la mano, la puede guardar en la pantalla de inicio y se abre como cualquier aplicación.",
     },
@@ -1468,8 +1684,8 @@ function FinalCTA({ onSignup }: { onSignup: () => void }) {
             className="mt-6 max-w-xl mx-auto text-base md:text-lg"
             style={{ color: "rgba(255,255,255,0.90)", textShadow: "0 1px 6px rgba(0,0,0,0.35)" }}
           >
-            Sin instalación, sin tarjeta de crédito. En 2 minutos ya está
-            registrando animales.
+            Vacas, búfalos, cabras, ovejas o caballos. Sin instalación y sin
+            tarjeta: en 2 minutos ya está registrando sus animales.
           </p>
           <button className="btn-lime mt-10" onClick={onSignup} style={{ padding: "1.1rem 2.4rem" }}>
             Crear mi cuenta gratis <IconArrowUp size={14} />
@@ -1517,9 +1733,9 @@ function Footer({ onLogin, onSignup, compacto = false }: { onLogin: () => void; 
               <div className="text-2xl font-bold uppercase tracking-tight">RumeApp</div>
             </div>
             <p className="mt-5 text-sm max-w-md leading-relaxed" style={{ color: "rgba(255,255,255,0.72)" }}>
-              La plataforma de gestión ganadera para fincas de Colombia y
-              Latinoamérica. Hato, sanidad, gastos entre socios &mdash; todo en
-              un solo lugar.
+              La app para manejar su finca en Colombia y Latinoamérica: bovinos,
+              búfalos, cabras, ovejas y caballos. Animales, plan sanitario y
+              gastos entre socios &mdash; todo en un solo lugar.
             </p>
             <div className="mt-6 flex items-center gap-3">
               {REDES.map((r) => (
@@ -1680,7 +1896,7 @@ function SociosSection() {
             <em style={{ color: "var(--forest-3)", fontStyle: "normal" }}>entre socios</em>
           </h2>
           <p className="mt-6 text-base leading-relaxed max-w-lg" style={{ color: "rgba(20, 38, 26, 0.72)" }}>
-            El problema de las fincas familiares no es la vaca — es{" "}
+            El problema de las fincas familiares no son los animales — es{" "}
             <strong style={{ color: "var(--forest)" }}>quién puso, cuánto y quién le debe a quién.</strong>{" "}
             Tres modos de reparto según el gasto:
           </p>

@@ -18,20 +18,22 @@ const spaceGrotesk = Space_Grotesk({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://rumea.app"),
-  title: "RumeApp · Gestión ganadera",
-  description: "Registra tu finca y controla tu hato: animales, sanidad, gastos y más.",
+  title: "RumeApp · Su finca en el celular",
+  description:
+    "Bovinos, búfalos, cabras, ovejas y caballos: animales, plan sanitario automático, partos y gastos entre socios, desde el celular.",
   appleWebApp: { capable: true, title: "RumeApp", statusBarStyle: "default" },
   openGraph: {
-    title: "RumeApp — Gestión ganadera",
-    description: "La app para cualquier ganadero: hato, sanidad, gastos y actividades.",
+    title: "RumeApp — Su finca en el celular",
+    description:
+      "Para vacas, búfalos, cabras, ovejas y caballos: plan sanitario automático, partos y gastos entre socios.",
     type: "website",
     locale: "es_CO",
     siteName: "RumeApp",
   },
   twitter: {
     card: "summary_large_image",
-    title: "RumeApp — Gestión ganadera",
-    description: "Registra tu finca y controla tu hato.",
+    title: "RumeApp — Su finca en el celular",
+    description: "Vacas, búfalos, cabras, ovejas y caballos: todo su manejo en una app.",
   },
 };
 
