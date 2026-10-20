@@ -116,8 +116,12 @@ export default function Dashboard() {
     month: "long",
   });
 
+  const lotesActivos = db!.lotes.filter((l) => l.estado === "activo").length;
+  const fincaVacia = stats.totalActivos === 0 && lotesActivos === 0;
+
   return (
     <div className="space-y-4 md:space-y-6 relative z-10">
+      {fincaVacia && <BienvenidaVacia />}
       {/* ═══════════════════ HERO CARD ═══════════════════ */}
       <section className="hero-card">
         <div className="relative flex flex-col md:flex-row md:items-end justify-between gap-5 md:gap-8">
@@ -383,6 +387,56 @@ export default function Dashboard() {
         <CompositionBars db={db!} />
       </section>
     </div>
+  );
+}
+
+/** Tarjeta de bienvenida cuando la finca aún no tiene animales ni lotes. */
+function BienvenidaVacia() {
+  return (
+    <section className="card space-y-4">
+      <div>
+        <div className="text-[0.62rem] font-mono uppercase tracking-widest text-muted mb-1">
+          Primeros pasos
+        </div>
+        <h2 className="text-lg font-semibold tracking-tight">¿Qué animales tiene en la finca?</h2>
+        <p className="text-sm text-muted mt-1">
+          Empiece por donde más le sirva. Los que se chapetean uno por uno van en Animales; las
+          gallinas, los pollos de engorde y los cerdos de ceba se llevan por lote.
+        </p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <Link
+          href="/animales?nuevo=1"
+          className="rounded-xl border border-rule px-4 py-3 hover:bg-surface-2 transition flex items-start gap-3"
+        >
+          <span className="text-3xl leading-none" aria-hidden>
+            🐄
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block text-sm font-semibold">Vacas, búfalos, cabras, ovejas, caballos y cerdos de cría</span>
+            <span className="block text-xs text-muted mt-0.5">
+              Se registran uno por uno en Animales, con chapeta, raza y plan sanitario.
+            </span>
+          </span>
+          <span className="text-muted" aria-hidden>→</span>
+        </Link>
+        <Link
+          href="/lotes?nuevo=1"
+          className="rounded-xl border border-rule px-4 py-3 hover:bg-surface-2 transition flex items-start gap-3"
+        >
+          <span className="text-3xl leading-none" aria-hidden>
+            🐔
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block text-sm font-semibold">Gallinas, pollos de engorde y cerdos de ceba</span>
+            <span className="block text-xs text-muted mt-0.5">
+              Se llevan por lote en Aves y lotes: huevos, mortalidad, alimento y conversión.
+            </span>
+          </span>
+          <span className="text-muted" aria-hidden>→</span>
+        </Link>
+      </div>
+    </section>
   );
 }
 
