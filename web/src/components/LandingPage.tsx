@@ -21,6 +21,7 @@ import {
 import PricingCards from "./PricingCards";
 import OfertaFundador, { QUIERE_FUNDADOR_KEY } from "./OfertaFundador";
 import CalculadoraPerdidas from "./CalculadoraPerdidas";
+import { SOPORTE_EMAIL, WHATSAPP_ICONO, WHATSAPP_URL } from "@/lib/contacto";
 
 /** Páginas públicas: la portada es corta (una pantalla) y el resto vive aparte. */
 export type SeccionLanding = "inicio" | "funciones" | "precios" | "preguntas";
@@ -137,7 +138,15 @@ export default function LandingPage({ onLogin, onSignup, seccion = "inicio" }: P
           <PageHeader
             eyebrow="Preguntas frecuentes"
             titulo={<>Lo que más<br /><em>nos preguntan.</em></>}
-            texto="¿No encuentra su pregunta? Escríbanos a soporte@rumea.app."
+            texto={
+              <>
+                ¿No encuentra su pregunta? Escríbanos por{" "}
+                <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "var(--lime)" }}>
+                  WhatsApp
+                </a>{" "}
+                o a {SOPORTE_EMAIL}.
+              </>
+            }
           />
           <FAQ />
           <FinalCTA onSignup={onSignup} />
@@ -145,6 +154,7 @@ export default function LandingPage({ onLogin, onSignup, seccion = "inicio" }: P
       )}
 
       <Footer onLogin={onLogin} onSignup={onSignup} compacto={seccion === "inicio"} />
+      <BotonWhatsApp />
     </div>
   );
 }
@@ -157,7 +167,7 @@ const LINKS_NAV: { href: string; label: string; seccion: SeccionLanding }[] = [
 ];
 
 /** Encabezado de las páginas internas (funciones, precios, preguntas). */
-function PageHeader({ eyebrow, titulo, texto }: { eyebrow: string; titulo: React.ReactNode; texto: string }) {
+function PageHeader({ eyebrow, titulo, texto }: { eyebrow: string; titulo: React.ReactNode; texto: React.ReactNode }) {
   return (
     <section className="relative pt-32 md:pt-40 pb-14 md:pb-20" style={{ background: "var(--forest)", color: "white" }}>
       <div className="max-w-4xl mx-auto px-4 md:px-6 text-center">
@@ -1705,6 +1715,7 @@ function FinalCTA({ onSignup }: { onSignup: () => void }) {
 //  Footer
 // ---------------------------------------------------------------------------
 const REDES = [
+  { nombre: "WhatsApp", url: WHATSAPP_URL, icono: WHATSAPP_ICONO },
   {
     nombre: "Instagram",
     url: "https://www.instagram.com/rumea.app/",
@@ -1805,6 +1816,33 @@ function FooterNav({ href, children }: { href: string; children: React.ReactNode
     <Link href={href} className="transition hover:text-white" style={{ color: "rgba(255,255,255,0.75)" }}>
       {children}
     </Link>
+  );
+}
+
+/** Botón flotante de WhatsApp en todas las páginas públicas (abajo a la
+ *  derecha; la barra decorativa va centrada y en celular se oculta). */
+function BotonWhatsApp() {
+  return (
+    <a
+      href={WHATSAPP_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Escríbanos por WhatsApp"
+      className="fixed z-50 inline-flex items-center gap-2 rounded-full font-semibold shadow-lg transition hover:scale-105"
+      style={{
+        right: "16px",
+        bottom: "calc(16px + env(safe-area-inset-bottom))",
+        background: "#25D366",
+        color: "white",
+        padding: "0.8rem",
+        boxShadow: "0 10px 24px -8px rgba(0,0,0,0.45)",
+      }}
+    >
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor" aria-hidden="true">
+        <path d={WHATSAPP_ICONO} />
+      </svg>
+      <span className="hidden md:inline pr-1 text-sm">Escríbanos</span>
+    </a>
   );
 }
 

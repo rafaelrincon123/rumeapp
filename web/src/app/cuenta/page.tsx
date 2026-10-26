@@ -20,6 +20,7 @@ import { DEPARTAMENTOS_CO } from "@/lib/colombia";
 import FormRow from "@/components/FormRow";
 import PasswordInput from "@/components/PasswordInput";
 import { IconLogout } from "@/components/icons";
+import AyudaWhatsApp from "@/components/AyudaWhatsApp";
 
 export default function CuentaPage() {
   const { authEmail } = useAuth();
@@ -40,6 +41,7 @@ export default function CuentaPage() {
       <RecordatoriosCard />
       <PasswordCard />
       <EmailCard email={authEmail ?? ""} />
+      <AyudaWhatsApp texto="Escríbanos por WhatsApp y le respondemos personalmente." />
       <div className="card flex items-center justify-between gap-3 flex-wrap">
         <div>
           <div className="text-sm font-semibold">Cerrar sesión</div>

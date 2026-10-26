@@ -26,6 +26,7 @@ import type { PlanFinca } from "@/lib/types";
 import Modal from "@/components/Modal";
 import PricingCards from "@/components/PricingCards";
 import OfertaFundador from "@/components/OfertaFundador";
+import AyudaWhatsApp from "@/components/AyudaWhatsApp";
 
 export default function PlanPage() {
   const { db, ready } = useDB();
@@ -107,6 +108,8 @@ export default function PlanPage() {
           Elige el plan que se ajusta al tamaño de tu operación. Puedes cambiar cuando quieras.
         </p>
       </header>
+
+      <AyudaWhatsApp texto="¿Dudas con los planes o con un pago? Escríbanos por WhatsApp y lo resolvemos juntos." />
 
       {enPrueba && (
         <div
