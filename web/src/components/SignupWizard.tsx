@@ -7,6 +7,7 @@ import { track } from "@vercel/analytics";
 import { signupWithEmail } from "@/lib/auth";
 import CodigoConfirmacion from "./CodigoConfirmacion";
 import { crearFinca } from "@/lib/useFincaActiva";
+import { leerCodigoReferido, limpiarCodigoReferido } from "@/lib/referido";
 import type { PlanFinca } from "@/lib/types";
 import { IconUser, IconLock } from "./icons";
 import PasswordInput from "./PasswordInput";
@@ -211,6 +212,7 @@ export default function SignupWizard({ onBack }: Props) {
  * (wizard de 3 pasos). Idempotente vía crearFinca. Llamado desde AuthGate.
  */
 export async function completarCreacionFinca(p: PendingSignup): Promise<void> {
+  const codigoRef = leerCodigoReferido();
   await crearFinca({
     nombre: p.nombreFinca,
     timezone: p.timezone,
@@ -221,7 +223,9 @@ export async function completarCreacionFinca(p: PendingSignup): Promise<void> {
     ciudad: p.ciudad || null,
     referidoVia: p.referidoVia || null,
     planElegido: p.planElegido ?? "ranchero",
+    codigoReferido: codigoRef,
   });
+  if (codigoRef) limpiarCodigoReferido();
   try {
     localStorage.removeItem(PENDING_SIGNUP_KEY);
   } catch {

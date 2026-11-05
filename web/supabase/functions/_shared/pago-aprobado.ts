@@ -77,6 +77,38 @@ function htmlCliente(o: { primerNombre: string; finca: string; plan: string; has
 </table></body></html>`;
 }
 
+function htmlReferidor(o: { primerNombre: string; dias: number }): string {
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ganó 30 días gratis</title></head>
+<body style="margin:0;padding:0;background:#0E1B12;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0E1B12;">
+  <tr><td align="center" style="padding:28px 12px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#14261A;border-radius:24px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;">
+      <tr><td style="padding:34px 32px 8px;">
+        <img src="https://rumea.app/logo.png" width="56" height="56" alt="RumeApp" style="display:block;border:0;">
+        <div style="margin-top:20px;display:inline-block;background:rgba(184,206,122,0.16);border:1px solid rgba(184,206,122,0.40);color:#B8CE7A;font-size:11px;letter-spacing:2px;text-transform:uppercase;padding:6px 12px;border-radius:999px;">Invite y gane</div>
+        <h1 style="margin:18px 0 0;color:#EFE8D8;font-size:28px;line-height:1.15;">¡Ganó ${esc(o.dias)} días gratis! 🎉</h1>
+      </td></tr>
+      <tr><td style="padding:18px 20px 8px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#22402A;border-radius:18px;">
+          <tr><td style="padding:26px 24px;color:#EFE8D8;font-size:16px;line-height:1.6;">
+            <p style="margin:0 0 14px;">Hola${o.primerNombre ? ", " + esc(o.primerNombre) : ""}:</p>
+            <p style="margin:0 0 14px;">Una finca que usted refirió acaba de pagar su primer plan en RumeApp. Como agradecimiento, le sumamos <b style="color:#B8CE7A;">${esc(o.dias)} días</b> a la fecha de vencimiento de su plan actual.</p>
+            <p style="margin:0 0 14px;">Siga invitando desde "Mi cuenta" en la app: cada finca nueva que pague le suma más días.</p>
+            <p style="margin:0;color:rgba(239,232,216,0.80);font-size:14px;">Gracias por recomendarnos.</p>
+          </td></tr>
+        </table>
+      </td></tr>
+      <tr><td align="center" style="padding:22px 32px 8px;">
+        <a href="https://rumea.app/cuenta" style="display:inline-block;background:#B8CE7A;color:#14261A;font-weight:bold;font-size:16px;text-decoration:none;padding:15px 34px;border-radius:999px;text-transform:uppercase;letter-spacing:1px;">Ver mi programa →</a>
+      </td></tr>
+      <tr><td style="padding:22px 32px 32px;color:rgba(239,232,216,0.65);font-size:14px;line-height:1.5;">
+        El equipo de RumeApp<br><a href="https://rumea.app/" style="color:#B8CE7A;text-decoration:none;">rumea.app</a>
+      </td></tr>
+    </table>
+  </td></tr>
+</table></body></html>`;
+}
+
 async function enviar(payload: Record<string, unknown>): Promise<{ ok: boolean; detalle: string }> {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -160,6 +192,30 @@ export async function avisarPagoAprobado(admin: any, orderId: string): Promise<v
       await admin.from("pagos_bold").update({ regalo_enviado_at: null }).eq("order_id", orderId);
     }
 
+    // Crédito al referidor (si aplica): la función en BD chequea que sea el
+    // primer pago del referido y que el referidor tenga plan pago vigente.
+    // Devuelve el user_id del referidor o null. Lo corremos AQUÍ (después de
+    // activar el plan) para que las reglas se evalúen contra el estado final.
+    let referidorAvisado: { email: string; nombre: string; dias: number } | null = null;
+    try {
+      const { data: referidorId } = await admin.rpc("otorgar_credito_referido", { p_order_id: orderId });
+      if (referidorId) {
+        const { data: refUser } = await admin.auth.admin.getUserById(referidorId as string);
+        const refEmail = refUser?.user?.email ?? "";
+        const refNombre = String(refUser?.user?.user_metadata?.nombre ?? "").trim();
+        if (refEmail) {
+          await enviar({
+            to: [refEmail],
+            subject: "¡Ganó 30 días gratis en RumeApp! 🎉",
+            html: htmlReferidor({ primerNombre: refNombre.split(/\s+/)[0] ?? "", dias: 30 }),
+          });
+          referidorAvisado = { email: refEmail, nombre: refNombre, dias: 30 };
+        }
+      }
+    } catch (e) {
+      console.error("otorgar_credito_referido / correo referidor falló", orderId, e);
+    }
+
     if (ADMIN_EMAIL) {
       const filas: [string, string][] = [
         ["Finca", finca?.nombre ?? reclamado.finca_id],
@@ -170,6 +226,7 @@ export async function avisarPagoAprobado(admin: any, orderId: string): Promise<v
         ["Activo hasta", hasta || "—"],
         ["Pago Bold", `${reclamado.bold_payment_id ?? "—"} (orden ${orderId})`],
         ["Guía al cliente", !tieneBovinos ? "NO aplica (la finca no tiene bovinos activos aún)" : clienteOk ? (adjunto ? "Enviada con el PDF adjunto" : "Enviada SIN el PDF: subir la guía a Storage → regalos y mandarla a mano") : "NO se pudo enviar el correo (se reintenta en el próximo aviso de Bold)"],
+        ["Referidor", referidorAvisado ? `${referidorAvisado.nombre || "—"} · ${referidorAvisado.email} · +${referidorAvisado.dias} días` : "No aplica"],
       ];
       await enviar({
         to: [ADMIN_EMAIL],

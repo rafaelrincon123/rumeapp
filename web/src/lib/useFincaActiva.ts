@@ -195,6 +195,8 @@ export async function crearFinca(opts: {
   referidoVia?: string | null;
   /** Plan que el usuario quiere (la finca igual arranca en Gratuito hasta que pague). */
   planElegido?: PlanFinca;
+  /** Código de referido vigente (p. ej. del link ?r=…). El servidor lo resuelve a user_id. */
+  codigoReferido?: string | null;
 }): Promise<Finca> {
   const sb = getSupabase();
   const { data, error } = await sb.rpc("crear_finca", {
@@ -207,6 +209,7 @@ export async function crearFinca(opts: {
     p_ciudad: opts.ciudad ?? null,
     p_referido_via: opts.referidoVia ?? null,
     p_plan_elegido: opts.planElegido ?? "ranchero",
+    p_codigo_referido: opts.codigoReferido ?? null,
   });
   if (error) throw new Error(error.message);
   if (!data) throw new Error("La finca no fue creada");

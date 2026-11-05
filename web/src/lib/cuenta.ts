@@ -14,6 +14,18 @@ export interface MiPerfil {
   avatar: string | null;
 }
 
+export interface MiReferido {
+  codigo: string;
+  pagados: number;
+  diasGanados: number;
+  creditos: Array<{
+    plan: string;
+    periodo: string;
+    dias: number;
+    creado: string;
+  }>;
+}
+
 const PERFIL_EVENT = "perfil:changed";
 
 const VACIO: MiPerfil = { nombre: "", telefono: "", departamento: "", ciudad: "", avatar: null };
@@ -52,6 +64,44 @@ export async function guardarMiPerfil(p: MiPerfil): Promise<void> {
   });
   if (error) throw new Error(error.message);
   if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(PERFIL_EVENT));
+}
+
+/**
+ * Datos del programa de referidos del usuario actual:
+ *  - su código y los créditos que ya ha ganado.
+ * Los nombres de los referidos no se exponen (privacidad); se muestra plan,
+ * período y fecha de cada crédito otorgado.
+ */
+export async function cargarMiReferido(): Promise<MiReferido | null> {
+  const sb = getSupabase();
+  const { data: auth } = await sb.auth.getUser();
+  if (!auth.user) return null;
+  const { data: perfil } = await sb
+    .from("user_profiles")
+    .select("codigo_referido")
+    .eq("user_id", auth.user.id)
+    .maybeSingle();
+  if (!perfil?.codigo_referido) return null;
+
+  const { data: creditos } = await sb
+    .from("creditos_referido")
+    .select("plan, periodo, dias, created_at")
+    .eq("user_id", auth.user.id)
+    .order("created_at", { ascending: false });
+
+  const filas = creditos ?? [];
+  const diasGanados = filas.reduce((t, c) => t + (c.dias ?? 0), 0);
+  return {
+    codigo: perfil.codigo_referido,
+    pagados: filas.length,
+    diasGanados,
+    creditos: filas.map((c) => ({
+      plan: c.plan,
+      periodo: c.periodo,
+      dias: c.dias,
+      creado: c.created_at,
+    })),
+  };
 }
 
 /** ¿Recibe el correo diario "Hoy toca"? Sin fila de perfil = sí (default de la columna). */

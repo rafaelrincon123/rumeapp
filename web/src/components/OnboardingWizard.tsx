@@ -5,6 +5,7 @@ import Image from "next/image";
 import { crearFinca } from "@/lib/useFincaActiva";
 import { logout } from "@/lib/auth";
 import { getSupabase } from "@/lib/supabase";
+import { leerCodigoReferido, limpiarCodigoReferido } from "@/lib/referido";
 import { IconLogout } from "./icons";
 
 interface Props {
@@ -45,12 +46,15 @@ export default function OnboardingWizard({ email, initialError }: Props) {
     }
     setLoading(true);
     try {
+      const codigoRef = leerCodigoReferido();
       await crearFinca({
         nombre: nombreFinca.trim(),
         timezone: "America/Bogota",
         nombrePropietario: nombrePropietario.trim() || undefined,
         telefono: whatsapp,
+        codigoReferido: codigoRef,
       });
+      if (codigoRef) limpiarCodigoReferido();
       // La finca activa ya quedó guardada; el AuthGate re-renderiza solo.
     } catch (err) {
       setError((err as Error).message ?? "No se pudo crear la finca. Intente de nuevo.");

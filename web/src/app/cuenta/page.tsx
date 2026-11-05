@@ -7,7 +7,9 @@ import { useFincaActiva } from "@/lib/useFincaActiva";
 import { logout } from "@/lib/auth";
 import {
   MiPerfil,
+  MiReferido,
   cargarMiPerfil,
+  cargarMiReferido,
   guardarMiPerfil,
   cambiarMiPassword,
   cambiarMiEmail,
@@ -38,6 +40,7 @@ export default function CuentaPage() {
     <div className="space-y-5 max-w-3xl mx-auto">
       <PerfilCard inicial={perfil} email={authEmail ?? ""} />
       <PlanCard />
+      <ReferidosCard />
       <RecordatoriosCard />
       <PasswordCard />
       <EmailCard email={authEmail ?? ""} />
@@ -291,6 +294,120 @@ function PlanCard() {
       >
         {esOwner ? "Actualizar plan" : "Ver planes"}
       </Link>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Referidos
+// ---------------------------------------------------------------------------
+
+/**
+ * Programa "Invite y gane": muestra el código y link del usuario, botones
+ * para copiar y compartir por WhatsApp, y la lista de créditos que ya ganó.
+ * Regla que se recuerda abajo: solo se recibe crédito si el referidor tiene
+ * plan pago vigente cuando su referido paga por primera vez.
+ */
+function ReferidosCard() {
+  const [ref, setRef] = useState<MiReferido | null>(null);
+  const [cargando, setCargando] = useState(true);
+  const [copiado, setCopiado] = useState<"codigo" | "link" | null>(null);
+
+  useEffect(() => {
+    cargarMiReferido()
+      .then(setRef)
+      .finally(() => setCargando(false));
+  }, []);
+
+  if (cargando) {
+    return (
+      <section className="card">
+        <div className="text-sm text-muted">Cargando programa de referidos…</div>
+      </section>
+    );
+  }
+  if (!ref) return null;
+
+  const link = `https://rumea.app/?r=${ref.codigo}`;
+  const mensaje = `Le recomiendo RumeApp para llevar su finca al día (bovinos, sanidad, gastos, actividades). Puede empezar gratis: ${link}`;
+
+  async function copiar(tipo: "codigo" | "link") {
+    const texto = tipo === "codigo" ? ref!.codigo : link;
+    try {
+      await navigator.clipboard.writeText(texto);
+      setCopiado(tipo);
+      setTimeout(() => setCopiado(null), 2000);
+    } catch {
+      /* ignore: el usuario puede copiar a mano */
+    }
+  }
+
+  return (
+    <section className="card space-y-4">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="text-base font-semibold">Invite y gane</h2>
+          <p className="text-xs text-muted mt-0.5 max-w-prose">
+            Comparta su link. Cuando una finca referida pague su primer plan y usted ya
+            tenga plan pago vigente, se le suman <b>30 días</b> a su plan actual.
+          </p>
+        </div>
+        <div className="flex items-center gap-4 text-right">
+          <div>
+            <div className="text-2xl font-bold leading-none">{ref.pagados}</div>
+            <div className="text-[0.6rem] font-mono uppercase tracking-[0.12em] text-muted mt-1">Pagaron</div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold leading-none">{ref.diasGanados}</div>
+            <div className="text-[0.6rem] font-mono uppercase tracking-[0.12em] text-muted mt-1">Días</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-xl p-3 flex items-center gap-3 flex-wrap" style={{ background: "rgba(184, 206, 122, 0.18)" }}>
+        <div className="flex-1 min-w-0">
+          <div className="text-[0.6rem] font-mono uppercase tracking-[0.12em] text-muted">Su código</div>
+          <div className="text-xl font-bold tracking-widest font-mono">{ref.codigo}</div>
+        </div>
+        <button type="button" className="btn btn-ghost text-xs" onClick={() => void copiar("codigo")}>
+          {copiado === "codigo" ? "✓ Copiado" : "Copiar"}
+        </button>
+      </div>
+
+      <div className="space-y-2">
+        <div className="text-[0.6rem] font-mono uppercase tracking-[0.12em] text-muted">Su link</div>
+        <div className="rounded-xl bg-surface-2 p-3 flex items-center gap-2 flex-wrap">
+          <code className="text-xs flex-1 truncate">{link}</code>
+          <button type="button" className="btn btn-ghost text-xs" onClick={() => void copiar("link")}>
+            {copiado === "link" ? "✓ Copiado" : "Copiar"}
+          </button>
+          <a
+            href={`https://wa.me/?text=${encodeURIComponent(mensaje)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-primary text-xs"
+          >
+            WhatsApp
+          </a>
+        </div>
+      </div>
+
+      {ref.creditos.length > 0 && (
+        <div>
+          <div className="text-[0.6rem] font-mono uppercase tracking-[0.12em] text-muted mb-2">Últimos créditos</div>
+          <ul className="space-y-1.5">
+            {ref.creditos.slice(0, 5).map((c, i) => (
+              <li key={i} className="text-sm flex items-center justify-between gap-3">
+                <span>
+                  Un referido pagó plan <b>{c.plan === "ganadero" ? "Pro" : c.plan === "hacienda" ? "Full" : c.plan}</b>
+                  {" "}· {c.periodo === "fundador" ? "Fundador" : c.periodo === "anual" ? "anual" : "mensual"}
+                </span>
+                <span className="text-xs text-muted shrink-0">+{c.dias} días</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   );
 }
