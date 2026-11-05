@@ -18,8 +18,8 @@ interface Props<T> {
 }
 
 /**
- * Botón "Exportar PDF" para las páginas de sección. Gratis para
- * Ganadero/Hacienda (y fincas que aún están en una prueba antigua); en Ranchero se ve
+ * Botón "Exportar PDF" para las páginas de sección. Gratis para Pro/Full (y
+ * fincas que aún están en una prueba antigua); en Gratuito se ve
  * deshabilitado con un tooltip que manda a /plan.
  */
 export default function ExportarPDFButton<T>({
@@ -44,11 +44,11 @@ export default function ExportarPDFButton<T>({
       <Link
         href="/plan"
         className={`btn btn-ghost text-xs ${className}`}
-        title="Reportes en PDF disponibles en los planes Ganadero y Hacienda"
+        title="Reportes en PDF disponibles en los planes Pro y Full"
       >
         <IconFile size={13} />
         Exportar PDF
-        <span className="text-[0.6rem] text-accent ml-1">Ganadero+</span>
+        <span className="text-[0.6rem] text-accent ml-1">Pro+</span>
       </Link>
     );
   }

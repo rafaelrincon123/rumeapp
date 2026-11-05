@@ -1,4 +1,4 @@
-import type { Finca, PlanFinca } from "./types";
+import type { Especie, Finca, PlanFinca } from "./types";
 
 // Espejo local de plan_limits en Supabase. Si cambia allá, cambiar aquí.
 export const PLAN_LIMITS: Record<
@@ -12,25 +12,32 @@ export const PLAN_LIMITS: Record<
     /** null = ilimitado. Total de personas con acceso (cualquier rol). */
     maxUsuarios: number | null;
     /** null = sin sub-límite (cualquiera de los maxUsuarios puede editar).
-     *  Ranchero=1: solo el owner edita, el resto debe ser "solo lectura". */
+     *  Gratuito=1: solo el owner edita, el resto debe ser "solo lectura". */
     maxUsuariosEditor: number | null;
     /** null = ilimitado */
     maxFincas: number | null;
     /** Lotes ACTIVOS de aves o cerdos (null = ilimitado). Espejo de plan_max_lotes(). */
     maxLotes: number | null;
+    /** Cuántas especies distintas puede tener activas la finca (null = todas). */
+    maxEspecies: number | null;
   }
 > = {
+  // ids técnicos (ranchero/ganadero/hacienda) no cambian: están en BD y RPCs.
+  // Solo cambian los nombres visibles en pantalla.
   ranchero: {
-    nombre: "Ranchero", precioCOP: 0,
+    nombre: "Gratuito", precioCOP: 0,
     maxAnimales: 5, maxUsuarios: 5, maxUsuariosEditor: 1, maxFincas: 1, maxLotes: 1,
+    maxEspecies: 2,
   },
   ganadero: {
-    nombre: "Ganadero", precioCOP: 25_000,
+    nombre: "Pro", precioCOP: 25_000,
     maxAnimales: 50, maxUsuarios: 5, maxUsuariosEditor: null, maxFincas: 3, maxLotes: null,
+    maxEspecies: 4,
   },
   hacienda: {
-    nombre: "Hacienda", precioCOP: 55_000,
+    nombre: "Full", precioCOP: 55_000,
     maxAnimales: null, maxUsuarios: null, maxUsuariosEditor: null, maxFincas: null, maxLotes: null,
+    maxEspecies: null,
   },
 };
 
@@ -47,19 +54,27 @@ export function nextPlan(plan: PlanFinca): PlanFinca | null {
 export type Periodo = "mensual" | "anual" | "fundador";
 
 /**
- * Plan Fundador: plan Ganadero por $150.000 el año con ese precio para siempre,
- * solo para las primeras 50 fincas que paguen (cupos_fundador() en la base;
- * bold-pago cobra y valida). Garantía: devolución del 100 % en 30 días.
+ * Plan Fundador: plan Full por $100.000 el año, para las primeras 100 fincas
+ * que paguen (cupos_fundador() en la base; bold-pago cobra y valida). Al año,
+ * la finca pasa a Full al precio normal. Garantía: devolución 100 % en 30 días.
+ *
+ * Cuando cupos_fundador() llega a 100, el plan desaparece solo de la UI (ver
+ * `fundadorAbierto()`). No se muestra contador de cupos ni fecha límite.
  */
-export const PRECIO_FUNDADOR = 150_000;
-export const CUPOS_FUNDADOR = 50;
+export const PRECIO_FUNDADOR = 100_000;
+export const CUPOS_FUNDADOR = 100;
 export const DIAS_GARANTIA = 30;
-/** La oferta se puede tomar hasta el 31 de octubre de 2026 (fin del día en Colombia). */
-export const FIN_FUNDADOR = "2026-11-01T05:00:00Z";
-export const FIN_FUNDADOR_TEXTO = "31 de octubre";
 
-export function fundadorAbierto(ahora = new Date()): boolean {
-  return ahora < new Date(FIN_FUNDADOR);
+/**
+ * El plan Fundador está abierto mientras queden cupos (hoy en código solo
+ * sabemos el tope; la cuenta real vive en cupos_fundador() en Supabase).
+ * Cuando quien llama tiene el conteo real (p.ej. una server action), lo pasa
+ * como `cupos_tomados`; con `cupos_tomados` nulo, asumimos abierto y el
+ * trigger del lado del servidor es el que rechaza al llegar a 100.
+ */
+export function fundadorAbierto(cuposTomados: number | null = null): boolean {
+  if (cuposTomados === null) return true;
+  return cuposTomados < CUPOS_FUNDADOR;
 }
 
 /** Descuento del plan anual sobre 12 meses de plan mensual. */
@@ -125,11 +140,11 @@ export function planEfectivo(
   return "ranchero";
 }
 
-/** Días de la prueba del plan Ganadero que se ofrece al llenar el plan gratis. */
+/** Días de la prueba del plan Pro que se ofrece al llenar el plan Gratuito. */
 export const DIAS_PRUEBA = 15;
 
 /**
- * ¿Puede activar la prueba de Ganadero? Solo fincas en el plan gratis que
+ * ¿Puede activar la prueba del plan Pro? Solo fincas en el plan Gratuito que
  * nunca tuvieron prueba (trial_ends_at null; espejo de iniciar_prueba_ganadero).
  */
 export function puedeProbar(finca: Pick<Finca, "plan" | "trialEndsAt" | "planPagado">): boolean {
@@ -172,6 +187,25 @@ export function usageStatus(
     nearLimit: remaining <= Math.max(2, Math.ceil(limit * 0.2)),
     pct,
   };
+}
+
+/**
+ * ¿Puede la finca registrar un animal de `especieObjetivo` con su plan actual?
+ *
+ * El tope cuenta especies DISTINTAS activas en el hato (sin lotes). Una
+ * especie que la finca ya usa siempre está permitida — el tope solo entra en
+ * juego al querer sumar una especie nueva al set.
+ */
+export function especiePermitida(
+  plan: PlanFinca,
+  especiesUsadas: Iterable<Especie>,
+  especieObjetivo: Especie,
+): boolean {
+  const max = PLAN_LIMITS[plan].maxEspecies;
+  if (max === null) return true;
+  const set = new Set(especiesUsadas);
+  if (set.has(especieObjetivo)) return true;
+  return set.size < max;
 }
 
 /**

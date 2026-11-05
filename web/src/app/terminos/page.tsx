@@ -64,8 +64,8 @@ export default function TerminosPage() {
 
             <Section n="3" title="Planes, precios y pagos">
               <p>
-                RumeApp ofrece tres planes: <strong>Ranchero</strong> (gratis para siempre, con límites de
-                animales y personas), <strong>Ganadero</strong> y <strong>Hacienda</strong> (planes pagos).
+                RumeApp ofrece tres planes: <strong>Gratuito</strong> (gratis para siempre, con límites de
+                animales y personas), <strong>Pro</strong> y <strong>Full</strong> (planes pagos).
                 Los planes pagos incluyen como obsequio la guía práctica «Ganadería rentable» (PDF), que se
                 envía al correo registrado una vez confirmado el primer pago. Los precios se muestran en pesos
                 colombianos y se pueden pagar mes a mes o por un año completo con descuento.
@@ -76,18 +76,17 @@ export default function TerminosPage() {
                 pagado (un mes o un año). También se puede transferir el valor a la cuenta indicada en la
                 app y subir el comprobante; en ese caso el equipo de RumeApp activa el plan una vez
                 confirmado el pago, lo que puede tardar hasta 24-48 horas hábiles. Mientras tanto la finca
-                sigue funcionando con el plan Ranchero.
+                sigue funcionando con el plan Gratuito.
               </p>
               <p className="mt-3">
-                <strong>Plan Fundador.</strong> Hasta el 31 de octubre de 2026 y mientras haya cupos (hasta 50
-                fincas), el plan Ganadero se puede pagar como plan Fundador: un año por el valor indicado en la app, que se mantiene en
-                cada renovación anual de esa finca aunque la tarifa general suba. El precio se conserva
-                mientras la finca renueve; si deja vencer el plan, puede renovarlo después al mismo valor.
+                <strong>Plan Fundador.</strong> Mientras haya cupos (hasta 100 fincas), el plan Full se puede
+                pagar como plan Fundador: un año por $100.000 COP. Al cumplirse el año, la finca pasa al plan
+                Full al precio vigente de ese momento.
               </p>
               <p className="mt-3">
                 <strong>Garantía de 30 días del plan Fundador.</strong> Si dentro de los 30 días siguientes
                 al pago del plan Fundador decides que RumeApp no te sirve, escríbenos a soporte@rumea.app y
-                te devolvemos el 100 % del valor pagado; la finca vuelve al plan Ranchero y conservas toda tu
+                te devolvemos el 100 % del valor pagado; la finca vuelve al plan Gratuito y conservas toda tu
                 información.
               </p>
               <p className="mt-3">

@@ -1,6 +1,8 @@
 // Correos al aprobarse un pago de Bold (lo usan bold-webhook y bold-pago):
 //   - al cliente: confirmación del plan + la guía de regalo en PDF adjunta
-//     (Storage, bucket privado "regalos").
+//     (Storage, bucket privado "regalos"). La guía SOLO se adjunta a fincas
+//     que tengan al menos un animal bovino activo: la guía es 100 % bovina
+//     y no tendría valor para una finca de solo cabras, cerdos o aves.
 //   - a Rafael (ADMIN_EMAIL): aviso con finca, plan, valor y medio de pago.
 //
 // No se mandan dos veces: antes de enviar se "reclama" el pago marcando
@@ -20,7 +22,7 @@ export const GUIA_BUCKET = "regalos";
 export const GUIA_ARCHIVO = "Guia-practica-ganaderia-RumeApp.pdf";
 export const GUIA_NOMBRE = "Ganadería rentable: guía práctica para la finca colombiana";
 
-const NOMBRE_PLAN: Record<string, string> = { ganadero: "Ganadero", hacienda: "Hacienda" };
+const NOMBRE_PLAN: Record<string, string> = { ganadero: "Pro", hacienda: "Full" };
 
 function esc(s: unknown): string {
   return String(s ?? "")
@@ -39,7 +41,7 @@ function fecha(iso: string | null): string {
   return new Date(iso).toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Bogota" });
 }
 
-function htmlCliente(o: { primerNombre: string; finca: string; plan: string; hasta: string; conGuia: boolean }): string {
+function htmlCliente(o: { primerNombre: string; finca: string; plan: string; hasta: string; conGuia: boolean; sinBovinos: boolean }): string {
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Su plan está activo</title></head>
 <body style="margin:0;padding:0;background:#0E1B12;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0E1B12;">
@@ -55,9 +57,11 @@ function htmlCliente(o: { primerNombre: string; finca: string; plan: string; has
           <tr><td style="padding:26px 24px;color:#EFE8D8;font-size:16px;line-height:1.6;">
             <p style="margin:0 0 14px;">Hola${o.primerNombre ? ", " + esc(o.primerNombre) : ""}:</p>
             <p style="margin:0 0 14px;">Gracias por confiar en RumeApp. Su finca <b style="color:#B8CE7A;">${esc(o.finca)}</b> quedó en el plan <b>${esc(o.plan)}</b>${o.hasta ? ` hasta el <b>${esc(o.hasta)}</b>` : ""}.</p>
-            ${o.conGuia
-              ? `<p style="margin:0 0 14px;">🎁 <b>Su regalo va adjunto en este correo:</b> la guía <i>${esc(GUIA_NOMBRE)}</i>, con lo práctico de pastos, nutrición, reproducción, terneros, sanidad, leche, ceba y los números de la finca, y cómo llevar cada cosa en RumeApp.</p>`
-              : `<p style="margin:0 0 14px;">🎁 Su regalo, la guía <i>${esc(GUIA_NOMBRE)}</i>, se la enviamos en un correo aparte en las próximas horas.</p>`}
+            ${o.sinBovinos
+              ? `<p style="margin:0 0 14px;color:rgba(239,232,216,0.80);font-size:14px;">La guía <i>${esc(GUIA_NOMBRE)}</i> es para fincas con ganado bovino: cuando registre su primera vaca, novilla o toro en RumeApp, le llegará de regalo.</p>`
+              : o.conGuia
+                ? `<p style="margin:0 0 14px;">🎁 <b>Su regalo va adjunto en este correo:</b> la guía <i>${esc(GUIA_NOMBRE)}</i>, con lo práctico de pastos, nutrición, reproducción, terneros, sanidad, leche, ceba y los números de la finca, y cómo llevar cada cosa en RumeApp.</p>`
+                : `<p style="margin:0 0 14px;">🎁 Su regalo, la guía <i>${esc(GUIA_NOMBRE)}</i>, se la enviamos en un correo aparte en las próximas horas.</p>`}
             <p style="margin:0;color:rgba(239,232,216,0.80);font-size:14px;">Si tiene cualquier duda, responda este correo y con gusto le ayudamos.</p>
           </td></tr>
         </table>
@@ -107,25 +111,43 @@ export async function avisarPagoAprobado(admin: any, orderId: string): Promise<v
     const plan = NOMBRE_PLAN[reclamado.plan] ?? reclamado.plan;
     const hasta = fecha(finca?.plan_pagado_hasta ?? null);
 
+    // La guía de regalo es 100 % bovina: solo se adjunta si la finca tiene
+    // ya al menos un animal bovino activo. Si la finca es de cabras, cerdos,
+    // caballos o aves, no se manda (el cliente puede volver a pedirla cuando
+    // registre su primer bovino).
+    const { count: bovinosActivos } = await admin
+      .from("animales")
+      .select("id", { count: "exact", head: true })
+      .eq("finca_id", reclamado.finca_id)
+      .eq("estado", "activo")
+      .eq("especie", "bovino");
+    const tieneBovinos = (bovinosActivos ?? 0) > 0;
+
     // La guía adjunta (si no está en Storage, el correo sale igual y se avisa a Rafael).
     let adjunto: { filename: string; content: string } | null = null;
-    const { data: archivo } = await admin.storage.from(GUIA_BUCKET).download(GUIA_ARCHIVO);
-    if (archivo) {
-      adjunto = { filename: GUIA_ARCHIVO, content: encodeBase64(new Uint8Array(await archivo.arrayBuffer())) };
+    if (tieneBovinos) {
+      const { data: archivo } = await admin.storage.from(GUIA_BUCKET).download(GUIA_ARCHIVO);
+      if (archivo) {
+        adjunto = { filename: GUIA_ARCHIVO, content: encodeBase64(new Uint8Array(await archivo.arrayBuffer())) };
+      }
     }
 
     let clienteOk = false;
     let detalleCliente = "sin correo del cliente";
     if (email) {
+      const subject = tieneBovinos
+        ? `Su plan ${plan} está activo 🎁 Aquí está su guía de regalo`
+        : `Su plan ${plan} está activo`;
       const r = await enviar({
         to: [email],
-        subject: `Su plan ${plan} está activo 🎁 Aquí está su guía de regalo`,
+        subject,
         html: htmlCliente({
           primerNombre: nombre.split(/\s+/)[0] ?? "",
           finca: finca?.nombre ?? "",
           plan,
           hasta,
           conGuia: !!adjunto,
+          sinBovinos: !tieneBovinos,
         }),
         ...(adjunto ? { attachments: [adjunto] } : {}),
       });
@@ -147,7 +169,7 @@ export async function avisarPagoAprobado(admin: any, orderId: string): Promise<v
         ["Medio de pago", reclamado.metodo ?? "—"],
         ["Activo hasta", hasta || "—"],
         ["Pago Bold", `${reclamado.bold_payment_id ?? "—"} (orden ${orderId})`],
-        ["Guía al cliente", clienteOk ? (adjunto ? "Enviada con el PDF adjunto" : "Enviada SIN el PDF: subir la guía a Storage → regalos y mandarla a mano") : "NO se pudo enviar el correo (se reintenta en el próximo aviso de Bold)"],
+        ["Guía al cliente", !tieneBovinos ? "NO aplica (la finca no tiene bovinos activos aún)" : clienteOk ? (adjunto ? "Enviada con el PDF adjunto" : "Enviada SIN el PDF: subir la guía a Storage → regalos y mandarla a mano") : "NO se pudo enviar el correo (se reintenta en el próximo aviso de Bold)"],
       ];
       await enviar({
         to: [ADMIN_EMAIL],

@@ -11,7 +11,7 @@ import { IconSparkles } from "./icons";
 
 // El momento de llenar el plan gratis (5 animales): en vez de un aviso de
 // límite, le muestra al ganadero lo que ya logró y le ofrece 15 días del plan
-// Ganadero sin pagar. Si la finca ya usó su prueba, lo lleva a los planes.
+// Pro sin pagar. Si la finca ya usó su prueba, lo lleva a los planes.
 
 interface Props {
   /**
@@ -67,7 +67,7 @@ export default function OfertaPrueba({ motivo, onActivada }: Props) {
         <div className="mx-auto w-11 h-11 rounded-full bg-primary text-white flex items-center justify-center">
           <IconSparkles size={20} />
         </div>
-        <h3 className="mt-2 font-semibold">¡Listo! Ya tiene el plan Ganadero</h3>
+        <h3 className="mt-2 font-semibold">¡Listo! Ya tiene el plan Pro</h3>
         <p className="text-sm text-muted mt-1">
           Gratis hasta el {fmtDate(hastaFecha)}. Siga registrando su hato: le caben hasta{" "}
           {ganadero.maxAnimales} animales.
@@ -90,7 +90,7 @@ export default function OfertaPrueba({ motivo, onActivada }: Props) {
               ? "¡Su finca ya está andando en RumeApp!"
               : motivo === "intento"
                 ? "Llegó al máximo del plan gratis"
-                : `Pruebe el plan Ganadero ${DIAS_PRUEBA} días gratis`}
+                : `Pruebe el plan Pro ${DIAS_PRUEBA} días gratis`}
           </h3>
           <p className="text-sm text-muted mt-0.5">Ya lleva {logros.join(" · ")}.</p>
         </div>
@@ -100,12 +100,12 @@ export default function OfertaPrueba({ motivo, onActivada }: Props) {
         El plan gratis llega hasta {PLAN_LIMITS.ranchero.maxAnimales} animales.{" "}
         {probar ? (
           <>
-            <b>Pruebe el plan Ganadero gratis por {DIAS_PRUEBA} días:</b> hasta {ganadero.maxAnimales}{" "}
+            <b>Pruebe el plan Pro gratis por {DIAS_PRUEBA} días:</b> hasta {ganadero.maxAnimales}{" "}
             animales, todo su equipo anotando y reportes en PDF.
           </>
         ) : (
           <>
-            Con el plan Ganadero ({cop(ganadero.precioCOP)} al mes) registra hasta{" "}
+            Con el plan Pro ({cop(ganadero.precioCOP)} al mes) registra hasta{" "}
             {ganadero.maxAnimales} animales, todo su equipo anota y saca reportes en PDF.
           </>
         )}
@@ -117,7 +117,7 @@ export default function OfertaPrueba({ motivo, onActivada }: Props) {
         {probar ? (
           <>
             <button type="button" className="btn btn-primary justify-center" onClick={activar} disabled={cargando}>
-              {cargando ? "Activando…" : `Probar Ganadero ${DIAS_PRUEBA} días gratis`}
+              {cargando ? "Activando…" : `Probar Pro ${DIAS_PRUEBA} días gratis`}
             </button>
             <p className="text-[0.72rem] text-subtle text-center">
               Sin tarjeta y sin compromiso. Si no paga, vuelve solo al plan gratis y no pierde nada
@@ -156,7 +156,7 @@ export function AvisoPrueba() {
           <IconSparkles size={16} />
         </span>
         <span className="flex-1 min-w-0 text-sm">
-          Terminó su prueba del plan <b>Ganadero</b>. Sus {animales} animales y todos sus registros siguen
+          Terminó su prueba del plan <b>Pro</b>. Sus {animales} animales y todos sus registros siguen
           guardados, pero el plan gratis permite registrar hasta {cupo}. Para seguir agregando, active un plan.
         </span>
         <span className="text-sm font-semibold text-primary whitespace-nowrap">Ver planes →</span>

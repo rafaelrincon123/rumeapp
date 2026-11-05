@@ -247,7 +247,7 @@ export default function CalculadoraPerdidas({ onLogin }: { onLogin: () => void }
             >
               {r.costo === 0 ? (
                 <div className="text-sm">
-                  Para {animales} animales le alcanza el plan <strong>Ranchero, gratis</strong>. Empezar
+                  Para {animales} animales le alcanza el plan <strong>Gratuito</strong>. Empezar
                   a llevar el control no le cuesta nada.
                 </div>
               ) : (

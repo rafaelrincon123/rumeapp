@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useDB } from "@/lib/useDB";
 import { hrefNuevo, useAbrirNuevo } from "@/lib/tutorial";
 import { updateCollection, uid, nowISO } from "@/lib/storage";
@@ -39,7 +40,7 @@ import PhotoInput from "@/components/PhotoInput";
 import HeroStat from "@/components/HeroStat";
 import PlanUsageBanner from "@/components/PlanUsageBanner";
 import ExportarPDFButton from "@/components/ExportarPDFButton";
-import { PLAN_LIMITS, planEfectivo } from "@/lib/plans";
+import { PLAN_LIMITS, especiePermitida, planEfectivo } from "@/lib/plans";
 import { useFincaActiva } from "@/lib/useFincaActiva";
 
 const ESTADOS: { value: EstadoAnimal; label: string }[] = [
@@ -921,10 +922,39 @@ function AnimalForm({
 
   const especie = especieDe(form);
   const info = infoEspecie(especie);
+  // Al EDITAR un animal no se chequea el tope (no suma especies nuevas al set).
+  // Al AGREGAR, bloqueamos las especies que harían pasar el tope del plan.
+  const planActual = activa ? planEfectivo(activa) : "ranchero";
+  const maxEspecies = PLAN_LIMITS[planActual].maxEspecies;
+  const especiesActivas = new Set(
+    (db?.animales ?? [])
+      .filter((a) => a.estado === "activo" && a.id !== form.id)
+      .map(especieDe),
+  );
+  const especiesBloqueadas: Set<Especie> | undefined =
+    !initial && maxEspecies !== null
+      ? new Set(
+          ESPECIES.map((e) => e.value).filter(
+            (v) => !especiesActivas.has(v) && especiesActivas.size >= maxEspecies,
+          ),
+        )
+      : undefined;
   const campoEspecie = (
     <div className="md:col-span-2">
       <div className="text-sm font-medium mb-1.5">¿Qué especie es?</div>
-      <SelectorEspecie value={especie} onChange={(e) => setForm({ ...form, especie: e })} />
+      <SelectorEspecie
+        value={especie}
+        onChange={(e) => setForm({ ...form, especie: e })}
+        especiesBloqueadas={especiesBloqueadas}
+      />
+      {maxEspecies !== null && especiesActivas.size >= maxEspecies && !initial && (
+        <p className="text-[0.72rem] mt-1.5" style={{ color: "var(--muted)" }}>
+          Su plan permite {maxEspecies} especies y ya las está usando.{" "}
+          <Link href="/plan" className="text-primary underline underline-offset-2">
+            Ver planes →
+          </Link>
+        </p>
+      )}
     </div>
   );
 
@@ -966,6 +996,12 @@ function AnimalForm({
       if (limit !== null && db.animales.length >= limit) {
         // En vez de un error, la oferta de prueba (o el enlace a los planes).
         setLimite(true);
+        return;
+      }
+      if (!especiePermitida(plan, especiesActivas, especie)) {
+        setError(
+          `Su plan ${PLAN_LIMITS[plan].nombre} solo permite ${PLAN_LIMITS[plan].maxEspecies} especies. Cambie a un plan con más especies para registrar ${info.plural.toLowerCase()}.`,
+        );
         return;
       }
     }

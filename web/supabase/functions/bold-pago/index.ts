@@ -35,10 +35,10 @@ const DESCUENTO_ANUAL = 0.25;
 // de cada finca (espejo de DESCUENTO_INICIAL / MESES_DESCUENTO_INICIAL).
 const DESCUENTO_INICIAL = 0.2;
 const MESES_DESCUENTO_INICIAL = 3;
-const NOMBRE_PLAN: Record<string, string> = { ganadero: "Ganadero", hacienda: "Hacienda" };
-// Plan Fundador (espejo de PRECIO_FUNDADOR en plans.ts): solo Ganadero.
-const PRECIO_FUNDADOR = 150_000;
-const FIN_FUNDADOR = new Date("2026-11-01T05:00:00Z"); // 31 de octubre, fin del día en Colombia
+const NOMBRE_PLAN: Record<string, string> = { ganadero: "Pro", hacienda: "Full" };
+// Plan Fundador (espejo de PRECIO_FUNDADOR en plans.ts): plan Full por el año.
+// Sin fecha límite — se controla solo por cupos (cupos_fundador()).
+const PRECIO_FUNDADOR = 100_000;
 
 function monto(plan: string, periodo: string, descuentoInicial: boolean): number {
   if (periodo === "fundador") return PRECIO_FUNDADOR;
@@ -91,8 +91,8 @@ Deno.serve(async (req: Request) => {
     if (!finca_id || !plan || !PRECIO_MES[plan] || !["mensual", "anual", "fundador"].includes(periodo ?? "")) {
       return json({ error: "Datos del pago incompletos" }, 400);
     }
-    if (periodo === "fundador" && plan !== "ganadero") {
-      return json({ error: "El plan Fundador es del plan Ganadero" }, 400);
+    if (periodo === "fundador" && plan !== "hacienda") {
+      return json({ error: "El plan Fundador es del plan Full" }, 400);
     }
     if (!BOLD_SECRET_KEY) return json({ error: "Los pagos en línea aún no están configurados" }, 503);
 
@@ -105,9 +105,6 @@ Deno.serve(async (req: Request) => {
       return json({ error: "Solo el dueño de la finca puede pagar el plan" }, 403);
     }
     if (periodo === "fundador" && !finca.fundador) {
-      if (new Date() >= FIN_FUNDADOR) {
-        return json({ error: "La oferta del plan Fundador terminó el 31 de octubre" }, 409);
-      }
       const { data: cupos } = await admin.rpc("cupos_fundador");
       if (!cupos || (cupos as number) <= 0) {
         return json({ error: "Ya se acabaron los cupos del plan Fundador" }, 409);

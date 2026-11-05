@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { getSupabase } from "@/lib/supabase";
-import { CUPOS_FUNDADOR, DIAS_GARANTIA, FIN_FUNDADOR_TEXTO, PLAN_LIMITS, PRECIO_FUNDADOR, cop, fundadorAbierto } from "@/lib/plans";
+import { DIAS_GARANTIA, PLAN_LIMITS, PRECIO_FUNDADOR, cop, fundadorAbierto } from "@/lib/plans";
 
-// Plan Fundador: plan Ganadero por $150.000 el año, precio para siempre, para
-// las primeras 50 fincas y hasta el 31 de octubre. No se muestra cuántos
-// cupos quedan (decisión de Rafael); cupos_fundador() solo sirve para
-// esconder la oferta si se acaban. Vencida o sin cupos no se muestra, salvo a
-// una finca que ya es fundadora (para renovar).
+// Plan Fundador: plan Full por $100.000 el año, para las primeras 100 fincas.
+// Al cumplir 1 año, la finca pasa al plan Full al precio vigente. No se
+// muestran cupos ni fecha (decisión de Rafael); cupos_fundador() solo sirve
+// para esconder la oferta cuando se completen los 100. Si ya es fundadora,
+// se muestra para renovar (ya al precio Full normal, no al Fundador).
 
 /** La persona eligió la oferta en la página pública antes de tener cuenta. */
 export const QUIERE_FUNDADOR_KEY = "rumeapp:quiereFundador";
@@ -56,7 +56,11 @@ export function RecordatorioFundador() {
   );
 }
 
-/** Cupos que quedan del plan Fundador (null mientras carga o si falla). */
+/**
+ * Cupos tomados del plan Fundador (null mientras carga o si falla la RPC).
+ * Antes era "cupos que quedan"; hoy quien llama decide si mostrar la oferta
+ * en función del tope (CUPOS_FUNDADOR). No se renderiza el número.
+ */
 export function useCuposFundador(): number | null {
   const [cupos, setCupos] = useState<number | null>(null);
   useEffect(() => {
@@ -77,9 +81,11 @@ export default function OfertaFundador({
   /** La finca ya pagó el plan Fundador: se muestra como renovación. */
   esFundador?: boolean;
 }) {
-  const cupos = useCuposFundador();
-  if (!esFundador && (cupos === null || cupos <= 0 || !fundadorAbierto())) return null;
-  const precioNormal = PLAN_LIMITS.ganadero.precioCOP * 12;
+  const cuposRestantes = useCuposFundador();
+  // Ocultar cuando se completen los 100 cupos. cupos_fundador() devuelve cuántos
+  // CUPOS QUEDAN (tope - tomados), así que <= 0 = agotado. null = aún cargando.
+  if (!esFundador && (cuposRestantes === null || cuposRestantes <= 0 || !fundadorAbierto())) return null;
+  const precioNormalAnual = PLAN_LIMITS.hacienda.precioCOP * 12;
 
   return (
     <section
@@ -91,21 +97,20 @@ export default function OfertaFundador({
           className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[0.68rem] font-mono uppercase tracking-[0.14em]"
           style={{ background: "rgba(184, 206, 122, 0.16)", border: "1px solid rgba(184, 206, 122, 0.4)", color: "var(--lime-bright)" }}
         >
-          {esFundador
-            ? "Usted es Fundador"
-            : `Plan Fundador · solo hasta el ${FIN_FUNDADOR_TEXTO}`}
+          {esFundador ? "Usted es Fundador" : "Plan Fundador"}
         </div>
         <h2 className="text-xl md:text-2xl font-bold leading-tight">
           {esFundador
-            ? `Renueve su plan Ganadero por ${cop(PRECIO_FUNDADOR)} el año`
-            : `Plan Ganadero por ${cop(PRECIO_FUNDADOR)} el año, con ese precio para siempre`}
+            ? `Su plan Full por ${cop(PRECIO_FUNDADOR)} el año como Fundador`
+            : `Plan Full por ${cop(PRECIO_FUNDADOR)} el primer año`}
         </h2>
         <ul className="text-sm space-y-1.5 opacity-90">
           <li>
-            ✓ Equivale a <b>{cop(PRECIO_FUNDADOR / 12)} al mes</b> (pagando mes a mes serían {cop(precioNormal)} al año).
+            ✓ Equivale a <b>{cop(Math.round(PRECIO_FUNDADOR / 12))} al mes</b> durante el primer año (pagando mes a mes serían {cop(precioNormalAnual)} al año).
           </li>
-          <li>✓ Cada año renueva al mismo precio, aunque la tarifa suba.</li>
-          <li>✓ Hasta {PLAN_LIMITS.ganadero.maxAnimales} animales, reparto entre socios y avisos de vacunas, purgas y partos.</li>
+          <li>✓ Acceso completo al plan Full: animales, personas y fincas ilimitados.</li>
+          <li>✓ Reparto entre socios, avisos de vacunas, purgas y partos, reportes en PDF.</li>
+          <li>✓ Al cumplirse el año, su finca pasa al plan Full al precio vigente de ese momento.</li>
           {!esFundador && (
             <li>
               ✓ <b>Garantía:</b> si en {DIAS_GARANTIA} días no le sirve, le devolvemos el 100 % de su dinero.
@@ -126,11 +131,6 @@ export default function OfertaFundador({
         >
           {textoBoton}
         </button>
-        {!esFundador && (
-          <span className="text-[0.7rem] opacity-70 md:text-right">
-            Cupos limitados: solo las primeras {CUPOS_FUNDADOR} fincas, hasta el {FIN_FUNDADOR_TEXTO}.
-          </span>
-        )}
       </div>
     </section>
   );

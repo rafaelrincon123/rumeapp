@@ -168,7 +168,7 @@ export function emitFincaChanged(): void {
 }
 
 /**
- * Activa la prueba de 15 días del plan Ganadero (RPC iniciar_prueba_ganadero:
+ * Activa la prueba de 15 días del plan Pro (RPC iniciar_prueba_ganadero:
  * solo el dueño, una vez por finca). Refresca la finca activa al terminar.
  */
 export async function iniciarPruebaGanadero(fincaId: string): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -193,7 +193,7 @@ export async function crearFinca(opts: {
   departamento?: string | null;
   ciudad?: string | null;
   referidoVia?: string | null;
-  /** Plan que el usuario quiere (la finca igual arranca en Ranchero hasta que pague). */
+  /** Plan que el usuario quiere (la finca igual arranca en Gratuito hasta que pague). */
   planElegido?: PlanFinca;
 }): Promise<Finca> {
   const sb = getSupabase();

@@ -46,7 +46,7 @@ const INFO: Record<
     paraQuien: "Operaciones en crecimiento que reparten gastos entre socios.",
     Icon: IconCow,
     features: [
-      { texto: "Todo lo del plan Ranchero" },
+      { texto: "Todo lo del plan Gratuito" },
       { texto: "Lotes de aves y cerdos ilimitados" },
       { texto: "Cualquier rol para tu equipo" },
       { texto: "Reparto de gastos entre socios" },
@@ -57,10 +57,10 @@ const INFO: Record<
   },
   hacienda: {
     tagline: "Sin límites, para grupos de fincas",
-    paraQuien: "Haciendas grandes o quien administra varias fincas.",
+    paraQuien: "Fincas grandes o quien administra varias fincas.",
     Icon: IconHome,
     features: [
-      { texto: "Todo lo del plan Ganadero" },
+      { texto: "Todo lo del plan Pro" },
       { texto: "Animales, personas y fincas ilimitados" },
       { texto: "Reportes en PDF de cada sección" },
       { texto: "Soporte dedicado" },
@@ -188,8 +188,8 @@ function Card({
     : planActual === undefined
     ? plan === "ranchero"
       ? "Empezar gratis"
-      : `Elegir ${limits.nombre}`
-    : `Cambiar a ${limits.nombre}`;
+      : `Elegir plan ${limits.nombre}`
+    : `Cambiar a plan ${limits.nombre}`;
 
   return (
     <div
@@ -364,7 +364,7 @@ function Card({
               </div>
               <div className="text-sm font-bold leading-snug">{CURSO_REGALO}</div>
               <div className="text-[0.7rem] mt-0.5" style={{ color: soft }}>
-                55 páginas en PDF. Se la enviamos al correo apenas se aprueba su pago.
+                55 páginas en PDF para fincas con ganado bovino. Le llega al correo al aprobarse su pago (o cuando registre su primer bovino).
               </div>
             </div>
           </div>

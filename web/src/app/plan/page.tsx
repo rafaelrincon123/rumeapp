@@ -40,7 +40,8 @@ export default function PlanPage() {
       setPagando({ plan: p, periodo: "mensual" });
       window.history.replaceState(null, "", "/plan");
     } else if (p === "fundador") {
-      setPagando({ plan: "ganadero", periodo: "fundador" });
+      // Fundador = plan Full (hacienda) por $100.000 el año.
+      setPagando({ plan: "hacienda", periodo: "fundador" });
       window.history.replaceState(null, "", "/plan");
     }
   }, []);
@@ -118,7 +119,7 @@ export default function PlanPage() {
         >
           Estás probando el plan <strong>{planLabel(activa.plan)}</strong> gratis — quedan{" "}
           <strong>{diasPrueba} día{diasPrueba === 1 ? "" : "s"}</strong>. Cuando termine, tu finca
-          vuelve al plan Ranchero salvo que la cambies a un plan pago.
+          vuelve al plan Gratuito salvo que la cambies a un plan pago.
         </div>
       )}
       {pruebaVencida && (
@@ -126,7 +127,7 @@ export default function PlanPage() {
           className="rounded-2xl px-4 py-3 text-sm"
           style={{ background: "rgba(200, 60, 60, 0.10)", border: "1px solid rgba(200, 60, 60, 0.30)" }}
         >
-          Tu prueba gratis terminó. Ahora estás en el plan <strong>Ranchero</strong>. Elige un
+          Tu prueba gratis terminó. Ahora estás en el plan <strong>Gratuito</strong>. Elige un
           plan abajo para seguir con más cupo.
         </div>
       )}
@@ -145,7 +146,7 @@ export default function PlanPage() {
           ) : (
             <>
               Su plan <strong>{planLabel(activa.plan)}</strong> venció el{" "}
-              {fmtDate(activa.planPagadoHasta)}. Ahora está en el plan Ranchero: renuévelo abajo.
+              {fmtDate(activa.planPagadoHasta)}. Ahora está en el plan Gratuito: renuévelo abajo.
             </>
           )}
         </div>
@@ -204,9 +205,9 @@ export default function PlanPage() {
         onSelect={(p, periodo) => {
           if (PLAN_LIMITS[p].precioCOP > 0) return setPagando({ plan: p, periodo });
           // Bajar al plan gratis no requiere pago: se pide por correo.
-          const asunto = encodeURIComponent(`Cambiar a plan Ranchero — ${activa.nombre}`);
+          const asunto = encodeURIComponent(`Cambiar a plan Gratuito — ${activa.nombre}`);
           const cuerpo = encodeURIComponent(
-            `Hola,\n\nQuiero pasar mi finca "${activa.nombre}" (id: ${activa.id}) al plan Ranchero gratis.\n\nGracias.`
+            `Hola,\n\nQuiero pasar mi finca "${activa.nombre}" (id: ${activa.id}) al plan Gratuito.\n\nGracias.`
           );
           window.location.href = `mailto:soporte@rumea.app?subject=${asunto}&body=${cuerpo}`;
         }}
@@ -338,7 +339,7 @@ function PagoManualModal({
     >
       <div className="space-y-4">
         <p className="text-sm rounded-xl px-3 py-2" style={{ background: "rgba(184, 206, 122, 0.22)" }}>
-          🎓 De regalo: al confirmar su pago le enviamos la <strong>{CURSO_REGALO}</strong> (55 páginas en PDF).
+          🎓 De regalo para fincas con ganado bovino: al confirmar su pago le enviamos la <strong>{CURSO_REGALO}</strong> (55 páginas en PDF). Si aún no tiene bovinos registrados, la guía le llega cuando registre el primero.
         </p>
 
         {PLAN_LIMITS[destino].precioCOP > 0 && (
@@ -351,7 +352,7 @@ function PagoManualModal({
               style={{ color: "var(--lime-bright)" }}
             >
               {periodo === "fundador"
-                ? "Plan Ganadero Fundador, por el año"
+                ? "Plan Fundador · Full por el año"
                 : periodo === "anual" ? "Valor del plan por el año" : "Valor del plan por mes"}
             </div>
             <div className="text-2xl font-bold mt-0.5">{cop(valor)} COP</div>

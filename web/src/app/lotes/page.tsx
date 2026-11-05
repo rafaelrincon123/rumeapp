@@ -38,7 +38,7 @@ function AvisoCupoLotes({ max }: { max: number | null }) {
     <div className="rounded-xl border border-primary px-4 py-3 text-sm space-y-2" style={{ background: "rgba(184, 206, 122, 0.18)" }}>
       <p>
         <b>El plan gratis permite {max} lote activo.</b> Para manejar más lotes de gallinas, pollos o
-        cerdos al tiempo, cierre el que tiene o pase al plan Ganadero, que tiene lotes ilimitados.
+        cerdos al tiempo, cierre el que tiene o pase al plan Pro, que tiene lotes ilimitados.
       </p>
       <Link href="/plan" className="btn btn-primary inline-flex">
         Ver planes

@@ -13,7 +13,7 @@ interface Props {
 /**
  * Aviso de uso vs límite del plan. Se oculta si:
  *  - No hay finca activa
- *  - El plan tiene límite infinito (Hacienda)
+ *  - El plan tiene límite infinito (Full)
  *  - Aún queda mucho cupo (más del 20% + al menos 3 items libres)
  * Al llegar al tope, se vuelve rojo y bloquea con CTA a /plan.
  */

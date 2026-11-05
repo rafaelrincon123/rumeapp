@@ -125,7 +125,7 @@ export default function LandingPage({ onLogin, onSignup, seccion = "inicio" }: P
           <PageHeader
             eyebrow="Precios"
             titulo={<>Empiece gratis.<br /><em>Crezca cuando quiera.</em></>}
-            texto="El plan Ranchero es gratis para siempre: hasta 5 animales y 1 lote de aves o cerdos. Sin tarjeta."
+            texto="El plan Gratuito es gratis para siempre: hasta 5 animales, 2 especies y 1 lote de aves o cerdos. Sin tarjeta."
           />
           <Pricing onSignup={onSignup} />
           <CalculadoraPerdidas onLogin={onSignup} />
@@ -1573,7 +1573,7 @@ function FAQ() {
   const qs = [
     {
       q: "¿Cuánto cuesta usar RumeApp?",
-      a: "Nada para arrancar. El plan Ranchero es gratis para siempre (hasta 5 animales y 1 lote de aves o cerdos). Los planes pagos tienen 20% de descuento los primeros 3 meses y traen de regalo la guía práctica «Ganadería rentable» (55 páginas); pagando el año completo ahorra 25%.",
+      a: "Nada para arrancar. El plan Gratuito es gratis para siempre (hasta 5 animales, 2 especies y 1 lote de aves o cerdos). Los planes pagos tienen 20% de descuento los primeros 3 meses y traen de regalo la guía práctica «Ganadería rentable» (55 páginas) a quienes tengan ganado bovino en su finca; pagando el año completo ahorra 25%.",
     },
     {
       q: "¿Sirve para cabras, ovejas, búfalos, caballos o cerdos?",
@@ -2448,7 +2448,7 @@ function AIAssistantSection() {
             <AIBullet>&ldquo;¿Qué animales están perdiendo peso?&rdquo;</AIBullet>
           </ul>
           <div className="mt-8 text-sm" style={{ color: "rgba(20, 38, 26, 0.65)" }}>
-            Incluido en los planes <strong style={{ color: "var(--forest)" }}>Ganadero</strong> y <strong style={{ color: "var(--forest)" }}>Hacienda</strong>.
+            Incluido en los planes <strong style={{ color: "var(--forest)" }}>Pro</strong> y <strong style={{ color: "var(--forest)" }}>Full</strong>.
           </div>
         </div>
 
