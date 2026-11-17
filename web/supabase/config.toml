@@ -1,0 +1,23 @@
+# Configuración de Supabase. Afecta deploys hechos con el CLI.
+# Los secretos reales viven en Supabase Edge Functions, no acá.
+
+[functions.correo-manual]
+verify_jwt = false
+
+[functions.notificar-admin]
+verify_jwt = false
+
+[functions.correo-bienvenida]
+verify_jwt = false
+
+[functions.recordatorios]
+verify_jwt = false
+
+[functions.seguimiento]
+verify_jwt = false
+
+[functions.correo-entrante]
+verify_jwt = false
+
+[functions.bold-webhook]
+verify_jwt = false
